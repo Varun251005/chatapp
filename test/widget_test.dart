@@ -11,7 +11,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:chatapp/main.dart';
 
 void main() {
-  testWidgets('ChatApp shows nickname entry screen', (WidgetTester tester) async {
+  testWidgets('ChatApp shows nickname entry screen', (
+    WidgetTester tester,
+  ) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const ChatApp());
 
