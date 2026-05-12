@@ -16,6 +16,7 @@ const Color _panelBorder = Color(0xFF2D355F);
 const Color _primaryPurple = Color(0xFF6C5CF6);
 const Color _textPrimary = Color(0xFFEAF0FF);
 const Color _textMuted = Color(0xFF98A2C7);
+const Color _boardBgColor = Color(0xFF0F152A);
 
 class ChatApp extends StatelessWidget {
   const ChatApp({super.key});
@@ -378,12 +379,108 @@ class _PeerState {
   final RTCVideoRenderer renderer;
 }
 
+enum _BoardTool { pen, pencil, marker, eraser, rect, circle, text }
+
+String _toolKey(_BoardTool tool) {
+  switch (tool) {
+    case _BoardTool.pen:
+      return 'pen';
+    case _BoardTool.pencil:
+      return 'pencil';
+    case _BoardTool.marker:
+      return 'marker';
+    case _BoardTool.eraser:
+      return 'eraser';
+    case _BoardTool.rect:
+      return 'rect';
+    case _BoardTool.circle:
+      return 'circle';
+    case _BoardTool.text:
+      return 'text';
+  }
+}
+
+_BoardTool _toolFromKey(String? value) {
+  switch (value) {
+    case 'pencil':
+      return _BoardTool.pencil;
+    case 'marker':
+      return _BoardTool.marker;
+    case 'eraser':
+      return _BoardTool.eraser;
+    case 'rect':
+      return _BoardTool.rect;
+    case 'circle':
+      return _BoardTool.circle;
+    case 'text':
+      return _BoardTool.text;
+    case 'pen':
+    default:
+      return _BoardTool.pen;
+  }
+}
+
 class _BoardPoint {
-  const _BoardPoint({required this.x, required this.y, required this.isBreak});
+  const _BoardPoint(this.x, this.y);
 
   final double x;
   final double y;
-  final bool isBreak;
+
+  Offset toOffset(Size size) {
+    return Offset(x * size.width, y * size.height);
+  }
+}
+
+abstract class _BoardItem {
+  const _BoardItem();
+}
+
+class _BoardStroke extends _BoardItem {
+  _BoardStroke({
+    required this.tool,
+    required this.points,
+    required this.color,
+    required this.width,
+    required this.opacity,
+  });
+
+  final _BoardTool tool;
+  final List<_BoardPoint> points;
+  final Color color;
+  final double width;
+  final double opacity;
+}
+
+class _BoardShape extends _BoardItem {
+  _BoardShape({
+    required this.tool,
+    required this.start,
+    required this.end,
+    required this.color,
+    required this.width,
+    required this.opacity,
+  });
+
+  final _BoardTool tool;
+  _BoardPoint start;
+  _BoardPoint end;
+  final Color color;
+  final double width;
+  final double opacity;
+}
+
+class _BoardText extends _BoardItem {
+  _BoardText({
+    required this.position,
+    required this.text,
+    required this.color,
+    required this.size,
+  });
+
+  final _BoardPoint position;
+  final String text;
+  final Color color;
+  final double size;
 }
 
 class _RoomScreenState extends State<RoomScreen> {
@@ -403,7 +500,14 @@ class _RoomScreenState extends State<RoomScreen> {
   bool _isVideoMode = true;
   bool _isScreenSharing = false;
   bool _lowBandwidthMode = false;
-  final List<_BoardPoint> _boardPoints = [];
+  final List<_BoardItem> _boardItems = [];
+  final Map<String, _BoardStroke> _remoteStrokes = {};
+  final Map<String, _BoardShape> _remoteShapes = {};
+  _BoardStroke? _activeStroke;
+  _BoardShape? _activeShape;
+  _BoardTool _selectedTool = _BoardTool.pen;
+  Color _selectedColor = Colors.white;
+  static const double _textToolSize = 16;
   List<Map<String, dynamic>> _participants = [];
   String? _hostNickname;
   bool _presentationMode = false;
@@ -626,7 +730,9 @@ class _RoomScreenState extends State<RoomScreen> {
     if (payloadType == 'whiteboard_clear') {
       if (!mounted) return;
       setState(() {
-        _boardPoints.clear();
+        _boardItems.clear();
+        _remoteStrokes.clear();
+        _remoteShapes.clear();
       });
       return;
     }
@@ -634,10 +740,26 @@ class _RoomScreenState extends State<RoomScreen> {
     if (payloadType != 'whiteboard_draw') return;
 
     final action = payload['action']?.toString() ?? 'move';
-    if (action == 'end') {
+    final tool = _toolFromKey(payload['tool']?.toString());
+
+    if (tool == _BoardTool.text && action == 'commit') {
+      final x = (payload['x'] as num?)?.toDouble();
+      final y = (payload['y'] as num?)?.toDouble();
+      final text = payload['text']?.toString().trim() ?? '';
+      if (x == null || y == null || text.isEmpty) return;
+      final colorValue = (payload['color'] as int?) ?? Colors.white.value;
+      final size = (payload['size'] as num?)?.toDouble() ?? _textToolSize;
+
       if (!mounted) return;
       setState(() {
-        _boardPoints.add(const _BoardPoint(x: 0, y: 0, isBreak: true));
+        _boardItems.add(
+          _BoardText(
+            position: _BoardPoint(x, y),
+            text: text,
+            color: Color(colorValue),
+            size: size,
+          ),
+        );
       });
       return;
     }
@@ -646,65 +768,258 @@ class _RoomScreenState extends State<RoomScreen> {
     final y = (payload['y'] as num?)?.toDouble();
     if (x == null || y == null) return;
 
+    final colorValue = (payload['color'] as int?) ?? Colors.white.value;
+    final width = (payload['width'] as num?)?.toDouble() ?? 2;
+    final opacity = (payload['opacity'] as num?)?.toDouble() ?? 1;
+    final color = Color(colorValue);
+
+    if (tool == _BoardTool.rect || tool == _BoardTool.circle) {
+      if (action == 'start') {
+        final shape = _BoardShape(
+          tool: tool,
+          start: _BoardPoint(x, y),
+          end: _BoardPoint(x, y),
+          color: color,
+          width: width,
+          opacity: opacity,
+        );
+        _remoteShapes[senderId] = shape;
+        if (!mounted) return;
+        setState(() {
+          _boardItems.add(shape);
+        });
+        return;
+      }
+
+      final shape = _remoteShapes[senderId];
+      if (shape == null) return;
+      if (!mounted) return;
+      setState(() {
+        shape.end = _BoardPoint(x, y);
+        if (action == 'end') {
+          _remoteShapes.remove(senderId);
+        }
+      });
+      return;
+    }
+
+    if (action == 'start') {
+      final stroke = _BoardStroke(
+        tool: tool,
+        points: [_BoardPoint(x, y)],
+        color: color,
+        width: width,
+        opacity: opacity,
+      );
+      _remoteStrokes[senderId] = stroke;
+      if (!mounted) return;
+      setState(() {
+        _boardItems.add(stroke);
+      });
+      return;
+    }
+
+    final stroke = _remoteStrokes[senderId];
+    if (stroke == null) return;
     if (!mounted) return;
     setState(() {
-      if (action == 'start' &&
-          _boardPoints.isNotEmpty &&
-          !_boardPoints.last.isBreak) {
-        _boardPoints.add(const _BoardPoint(x: 0, y: 0, isBreak: true));
+      stroke.points.add(_BoardPoint(x, y));
+      if (action == 'end') {
+        _remoteStrokes.remove(senderId);
       }
-      _boardPoints.add(_BoardPoint(x: x, y: y, isBreak: false));
     });
   }
 
   void _onBoardPanStart(DragStartDetails details, Size size) {
-    _addLocalBoardPoint(details.localPosition, size, action: 'start');
-  }
+    if (_selectedTool == _BoardTool.text) return;
 
-  void _onBoardPanUpdate(DragUpdateDetails details, Size size) {
-    _addLocalBoardPoint(details.localPosition, size, action: 'move');
-  }
+    final point = _normalizeBoardPoint(details.localPosition, size);
+    if (point == null) return;
 
-  void _onBoardPanEnd() {
+    if (_selectedTool == _BoardTool.rect || _selectedTool == _BoardTool.circle) {
+      final shape = _BoardShape(
+        tool: _selectedTool,
+        start: point,
+        end: point,
+        color: _toolColor(_selectedTool),
+        width: _toolWidth(_selectedTool),
+        opacity: _toolOpacity(_selectedTool),
+      );
+      _activeShape = shape;
+      setState(() {
+        _boardItems.add(shape);
+      });
+      _sendWhiteboardDraw(
+        action: 'start',
+        point: point,
+        tool: _selectedTool,
+        color: shape.color,
+        width: shape.width,
+        opacity: shape.opacity,
+      );
+      return;
+    }
+
+    final stroke = _BoardStroke(
+      tool: _selectedTool,
+      points: [point],
+      color: _toolColor(_selectedTool),
+      width: _toolWidth(_selectedTool),
+      opacity: _toolOpacity(_selectedTool),
+    );
+    _activeStroke = stroke;
     setState(() {
-      _boardPoints.add(const _BoardPoint(x: 0, y: 0, isBreak: true));
+      _boardItems.add(stroke);
     });
-
-    _channel.sink.add(
-      jsonEncode({
-        'type': 'whiteboard_draw',
-        'action': 'end',
-        'sender_id': _clientId,
-        'nickname': widget.nickname,
-      }),
+    _sendWhiteboardDraw(
+      action: 'start',
+      point: point,
+      tool: stroke.tool,
+      color: stroke.color,
+      width: stroke.width,
+      opacity: stroke.opacity,
     );
   }
 
-  void _addLocalBoardPoint(
-    Offset localOffset,
-    Size size, {
-    required String action,
-  }) {
-    if (size.width <= 0 || size.height <= 0) return;
+  void _onBoardPanUpdate(DragUpdateDetails details, Size size) {
+    if (_selectedTool == _BoardTool.text) return;
 
-    final x = (localOffset.dx / size.width).clamp(0.0, 1.0);
-    final y = (localOffset.dy / size.height).clamp(0.0, 1.0);
+    final point = _normalizeBoardPoint(details.localPosition, size);
+    if (point == null) return;
+
+    if (_activeShape != null) {
+      setState(() {
+        _activeShape!.end = point;
+      });
+      _sendWhiteboardDraw(
+        action: 'move',
+        point: point,
+        tool: _activeShape!.tool,
+      );
+      return;
+    }
+
+    if (_activeStroke == null) return;
+    setState(() {
+      _activeStroke!.points.add(point);
+    });
+    _sendWhiteboardDraw(
+      action: 'move',
+      point: point,
+      tool: _activeStroke!.tool,
+    );
+  }
+
+  void _onBoardPanEnd() {
+    if (_activeShape != null) {
+      final shape = _activeShape!;
+      _sendWhiteboardDraw(action: 'end', point: shape.end, tool: shape.tool);
+      _activeShape = null;
+      return;
+    }
+
+    if (_activeStroke != null) {
+      final stroke = _activeStroke!;
+      final lastPoint = stroke.points.isNotEmpty ? stroke.points.last : null;
+      if (lastPoint != null) {
+        _sendWhiteboardDraw(
+          action: 'end',
+          point: lastPoint,
+          tool: stroke.tool,
+        );
+      }
+      _activeStroke = null;
+    }
+  }
+
+  _BoardPoint? _normalizeBoardPoint(Offset offset, Size size) {
+    if (size.width <= 0 || size.height <= 0) return null;
+    final x = (offset.dx / size.width).clamp(0.0, 1.0);
+    final y = (offset.dy / size.height).clamp(0.0, 1.0);
+    return _BoardPoint(x, y);
+  }
+
+  void _sendWhiteboardDraw({
+    required String action,
+    required _BoardPoint point,
+    required _BoardTool tool,
+    Color? color,
+    double? width,
+    double? opacity,
+  }) {
+    final payload = <String, dynamic>{
+      'type': 'whiteboard_draw',
+      'action': action,
+      'tool': _toolKey(tool),
+      'x': point.x,
+      'y': point.y,
+      'sender_id': _clientId,
+      'nickname': widget.nickname,
+    };
+
+    if (color != null) payload['color'] = color.value;
+    if (width != null) payload['width'] = width;
+    if (opacity != null) payload['opacity'] = opacity;
+
+    _channel.sink.add(jsonEncode(payload));
+  }
+
+  Future<void> _addTextAt(Offset localOffset, Size size) async {
+    final point = _normalizeBoardPoint(localOffset, size);
+    if (point == null) return;
+
+    final controller = TextEditingController();
+    final text = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF121A33),
+          title: const Text('Add text'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(hintText: 'Type text'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () =>
+                  Navigator.pop(context, controller.text.trim()),
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted) return;
+    final value = text?.trim() ?? '';
+    if (value.isEmpty) return;
 
     setState(() {
-      if (action == 'start' &&
-          _boardPoints.isNotEmpty &&
-          !_boardPoints.last.isBreak) {
-        _boardPoints.add(const _BoardPoint(x: 0, y: 0, isBreak: true));
-      }
-      _boardPoints.add(_BoardPoint(x: x, y: y, isBreak: false));
+      _boardItems.add(
+        _BoardText(
+          position: point,
+          text: value,
+          color: _selectedColor,
+          size: _textToolSize,
+        ),
+      );
     });
 
     _channel.sink.add(
       jsonEncode({
         'type': 'whiteboard_draw',
-        'action': action,
-        'x': x,
-        'y': y,
+        'action': 'commit',
+        'tool': _toolKey(_BoardTool.text),
+        'x': point.x,
+        'y': point.y,
+        'text': value,
+        'color': _selectedColor.value,
+        'size': _textToolSize,
         'sender_id': _clientId,
         'nickname': widget.nickname,
       }),
@@ -713,7 +1028,11 @@ class _RoomScreenState extends State<RoomScreen> {
 
   void _clearBoard() {
     setState(() {
-      _boardPoints.clear();
+      _boardItems.clear();
+      _remoteStrokes.clear();
+      _remoteShapes.clear();
+      _activeStroke = null;
+      _activeShape = null;
     });
 
     _channel.sink.add(
@@ -1914,8 +2233,9 @@ class _RoomScreenState extends State<RoomScreen> {
                       child: Row(
                         children: [
                           Container(
-                            width: 42,
+                            width: 48,
                             margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
                             decoration: BoxDecoration(
                               color: const Color(0xFF111A34),
                               borderRadius: BorderRadius.circular(10),
@@ -1923,22 +2243,62 @@ class _RoomScreenState extends State<RoomScreen> {
                             ),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: const [
-                                Icon(Icons.edit, color: Colors.white, size: 18),
-                                Icon(
-                                  Icons.brush_outlined,
-                                  color: _textMuted,
-                                  size: 18,
+                              children: [
+                                _BoardToolButton(
+                                  icon: Icons.brush_outlined,
+                                  label: 'Pen',
+                                  selected: _selectedTool == _BoardTool.pen,
+                                  onTap: () => setState(() {
+                                    _selectedTool = _BoardTool.pen;
+                                  }),
                                 ),
-                                Icon(
-                                  Icons.crop_square_outlined,
-                                  color: _textMuted,
-                                  size: 18,
+                                _BoardToolButton(
+                                  icon: Icons.edit,
+                                  label: 'Pencil',
+                                  selected: _selectedTool == _BoardTool.pencil,
+                                  onTap: () => setState(() {
+                                    _selectedTool = _BoardTool.pencil;
+                                  }),
                                 ),
-                                Icon(
-                                  Icons.text_fields,
-                                  color: _textMuted,
-                                  size: 18,
+                                _BoardToolButton(
+                                  icon: Icons.format_paint,
+                                  label: 'Marker',
+                                  selected: _selectedTool == _BoardTool.marker,
+                                  onTap: () => setState(() {
+                                    _selectedTool = _BoardTool.marker;
+                                  }),
+                                ),
+                                _BoardToolButton(
+                                  icon: Icons.auto_fix_off,
+                                  label: 'Eraser',
+                                  selected: _selectedTool == _BoardTool.eraser,
+                                  onTap: () => setState(() {
+                                    _selectedTool = _BoardTool.eraser;
+                                  }),
+                                ),
+                                _BoardToolButton(
+                                  icon: Icons.crop_square_outlined,
+                                  label: 'Rect',
+                                  selected: _selectedTool == _BoardTool.rect,
+                                  onTap: () => setState(() {
+                                    _selectedTool = _BoardTool.rect;
+                                  }),
+                                ),
+                                _BoardToolButton(
+                                  icon: Icons.circle_outlined,
+                                  label: 'Circle',
+                                  selected: _selectedTool == _BoardTool.circle,
+                                  onTap: () => setState(() {
+                                    _selectedTool = _BoardTool.circle;
+                                  }),
+                                ),
+                                _BoardToolButton(
+                                  icon: Icons.text_fields,
+                                  label: 'Text',
+                                  selected: _selectedTool == _BoardTool.text,
+                                  onTap: () => setState(() {
+                                    _selectedTool = _BoardTool.text;
+                                  }),
                                 ),
                               ],
                             ),
@@ -1952,6 +2312,14 @@ class _RoomScreenState extends State<RoomScreen> {
                                 );
 
                                 return GestureDetector(
+                                  onTapDown: (details) {
+                                    if (_selectedTool == _BoardTool.text) {
+                                      _addTextAt(
+                                        details.localPosition,
+                                        canvasSize,
+                                      );
+                                    }
+                                  },
                                   onPanStart: (details) =>
                                       _onBoardPanStart(details, canvasSize),
                                   onPanUpdate: (details) =>
@@ -1959,7 +2327,7 @@ class _RoomScreenState extends State<RoomScreen> {
                                   onPanEnd: (_) => _onBoardPanEnd(),
                                   child: Container(
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF0F152A),
+                                      color: _boardBgColor,
                                       borderRadius: BorderRadius.circular(10),
                                       border: Border.all(color: _panelBorder),
                                     ),
@@ -1968,7 +2336,7 @@ class _RoomScreenState extends State<RoomScreen> {
                                         Positioned.fill(
                                           child: CustomPaint(
                                             painter: _WhiteboardPainter(
-                                              points: _boardPoints,
+                                              items: _boardItems,
                                             ),
                                           ),
                                         ),
@@ -1994,11 +2362,45 @@ class _RoomScreenState extends State<RoomScreen> {
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        _ColorDot(color: Colors.green.shade500),
+                        _ColorDot(
+                          color: Colors.white,
+                          selected: _selectedColor == Colors.white,
+                          onTap: () => setState(() {
+                            _selectedColor = Colors.white;
+                          }),
+                        ),
                         const SizedBox(width: 8),
-                        _ColorDot(color: Colors.blue.shade400),
+                        _ColorDot(
+                          color: Colors.green.shade500,
+                          selected: _selectedColor == Colors.green.shade500,
+                          onTap: () => setState(() {
+                            _selectedColor = Colors.green.shade500;
+                          }),
+                        ),
                         const SizedBox(width: 8),
-                        _ColorDot(color: Colors.purple.shade400),
+                        _ColorDot(
+                          color: Colors.blue.shade400,
+                          selected: _selectedColor == Colors.blue.shade400,
+                          onTap: () => setState(() {
+                            _selectedColor = Colors.blue.shade400;
+                          }),
+                        ),
+                        const SizedBox(width: 8),
+                        _ColorDot(
+                          color: Colors.purple.shade400,
+                          selected: _selectedColor == Colors.purple.shade400,
+                          onTap: () => setState(() {
+                            _selectedColor = Colors.purple.shade400;
+                          }),
+                        ),
+                        const SizedBox(width: 8),
+                        _ColorDot(
+                          color: Colors.orange.shade400,
+                          selected: _selectedColor == Colors.orange.shade400,
+                          onTap: () => setState(() {
+                            _selectedColor = Colors.orange.shade400;
+                          }),
+                        ),
                       ],
                     ),
                   ],
