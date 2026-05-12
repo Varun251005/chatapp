@@ -1044,6 +1044,41 @@ class _RoomScreenState extends State<RoomScreen> {
     );
   }
 
+  double _toolWidth(_BoardTool tool) {
+    switch (tool) {
+      case _BoardTool.pencil:
+        return 2;
+      case _BoardTool.marker:
+        return 8;
+      case _BoardTool.eraser:
+        return 16;
+      case _BoardTool.rect:
+      case _BoardTool.circle:
+        return 3;
+      case _BoardTool.text:
+        return 0;
+      case _BoardTool.pen:
+      default:
+        return 3;
+    }
+  }
+
+  double _toolOpacity(_BoardTool tool) {
+    switch (tool) {
+      case _BoardTool.pencil:
+        return 0.6;
+      case _BoardTool.marker:
+        return 0.35;
+      default:
+        return 1.0;
+    }
+  }
+
+  Color _toolColor(_BoardTool tool) {
+    if (tool == _BoardTool.eraser) return _boardBgColor;
+    return _selectedColor;
+  }
+
   Future<void> _handleSignalingMessage(Map<String, dynamic> payload) async {
     final senderId = payload['sender_id']?.toString() ?? '';
     if (senderId.isEmpty || senderId == _clientId) return;
@@ -2233,74 +2268,80 @@ class _RoomScreenState extends State<RoomScreen> {
                       child: Row(
                         children: [
                           Container(
-                            width: 48,
+                            width: 52,
                             margin: const EdgeInsets.only(right: 8),
-                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            padding: const EdgeInsets.symmetric(vertical: 6),
                             decoration: BoxDecoration(
                               color: const Color(0xFF111A34),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(color: _panelBorder),
                             ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                _BoardToolButton(
-                                  icon: Icons.brush_outlined,
-                                  label: 'Pen',
-                                  selected: _selectedTool == _BoardTool.pen,
-                                  onTap: () => setState(() {
-                                    _selectedTool = _BoardTool.pen;
-                                  }),
+                            child: Scrollbar(
+                              thumbVisibility: true,
+                              child: SingleChildScrollView(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _BoardToolButton(
+                                      icon: Icons.brush_outlined,
+                                      label: 'Pen',
+                                      selected: _selectedTool == _BoardTool.pen,
+                                      onTap: () => setState(() {
+                                        _selectedTool = _BoardTool.pen;
+                                      }),
+                                    ),
+                                    _BoardToolButton(
+                                      icon: Icons.edit,
+                                      label: 'Pencil',
+                                      selected: _selectedTool == _BoardTool.pencil,
+                                      onTap: () => setState(() {
+                                        _selectedTool = _BoardTool.pencil;
+                                      }),
+                                    ),
+                                    _BoardToolButton(
+                                      icon: Icons.format_paint,
+                                      label: 'Marker',
+                                      selected: _selectedTool == _BoardTool.marker,
+                                      onTap: () => setState(() {
+                                        _selectedTool = _BoardTool.marker;
+                                      }),
+                                    ),
+                                    _BoardToolButton(
+                                      icon: Icons.auto_fix_off,
+                                      label: 'Eraser',
+                                      selected: _selectedTool == _BoardTool.eraser,
+                                      onTap: () => setState(() {
+                                        _selectedTool = _BoardTool.eraser;
+                                      }),
+                                    ),
+                                    _BoardToolButton(
+                                      icon: Icons.crop_square_outlined,
+                                      label: 'Rect',
+                                      selected: _selectedTool == _BoardTool.rect,
+                                      onTap: () => setState(() {
+                                        _selectedTool = _BoardTool.rect;
+                                      }),
+                                    ),
+                                    _BoardToolButton(
+                                      icon: Icons.circle_outlined,
+                                      label: 'Circle',
+                                      selected:
+                                          _selectedTool == _BoardTool.circle,
+                                      onTap: () => setState(() {
+                                        _selectedTool = _BoardTool.circle;
+                                      }),
+                                    ),
+                                    _BoardToolButton(
+                                      icon: Icons.text_fields,
+                                      label: 'Text',
+                                      selected: _selectedTool == _BoardTool.text,
+                                      onTap: () => setState(() {
+                                        _selectedTool = _BoardTool.text;
+                                      }),
+                                    ),
+                                  ],
                                 ),
-                                _BoardToolButton(
-                                  icon: Icons.edit,
-                                  label: 'Pencil',
-                                  selected: _selectedTool == _BoardTool.pencil,
-                                  onTap: () => setState(() {
-                                    _selectedTool = _BoardTool.pencil;
-                                  }),
-                                ),
-                                _BoardToolButton(
-                                  icon: Icons.format_paint,
-                                  label: 'Marker',
-                                  selected: _selectedTool == _BoardTool.marker,
-                                  onTap: () => setState(() {
-                                    _selectedTool = _BoardTool.marker;
-                                  }),
-                                ),
-                                _BoardToolButton(
-                                  icon: Icons.auto_fix_off,
-                                  label: 'Eraser',
-                                  selected: _selectedTool == _BoardTool.eraser,
-                                  onTap: () => setState(() {
-                                    _selectedTool = _BoardTool.eraser;
-                                  }),
-                                ),
-                                _BoardToolButton(
-                                  icon: Icons.crop_square_outlined,
-                                  label: 'Rect',
-                                  selected: _selectedTool == _BoardTool.rect,
-                                  onTap: () => setState(() {
-                                    _selectedTool = _BoardTool.rect;
-                                  }),
-                                ),
-                                _BoardToolButton(
-                                  icon: Icons.circle_outlined,
-                                  label: 'Circle',
-                                  selected: _selectedTool == _BoardTool.circle,
-                                  onTap: () => setState(() {
-                                    _selectedTool = _BoardTool.circle;
-                                  }),
-                                ),
-                                _BoardToolButton(
-                                  icon: Icons.text_fields,
-                                  label: 'Text',
-                                  selected: _selectedTool == _BoardTool.text,
-                                  onTap: () => setState(() {
-                                    _selectedTool = _BoardTool.text;
-                                  }),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
                           Expanded(
@@ -2360,7 +2401,9 @@ class _RoomScreenState extends State<RoomScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
                         _ColorDot(
                           color: Colors.white,
@@ -2369,7 +2412,6 @@ class _RoomScreenState extends State<RoomScreen> {
                             _selectedColor = Colors.white;
                           }),
                         ),
-                        const SizedBox(width: 8),
                         _ColorDot(
                           color: Colors.green.shade500,
                           selected: _selectedColor == Colors.green.shade500,
@@ -2377,7 +2419,6 @@ class _RoomScreenState extends State<RoomScreen> {
                             _selectedColor = Colors.green.shade500;
                           }),
                         ),
-                        const SizedBox(width: 8),
                         _ColorDot(
                           color: Colors.blue.shade400,
                           selected: _selectedColor == Colors.blue.shade400,
@@ -2385,7 +2426,6 @@ class _RoomScreenState extends State<RoomScreen> {
                             _selectedColor = Colors.blue.shade400;
                           }),
                         ),
-                        const SizedBox(width: 8),
                         _ColorDot(
                           color: Colors.purple.shade400,
                           selected: _selectedColor == Colors.purple.shade400,
@@ -2393,7 +2433,6 @@ class _RoomScreenState extends State<RoomScreen> {
                             _selectedColor = Colors.purple.shade400;
                           }),
                         ),
-                        const SizedBox(width: 8),
                         _ColorDot(
                           color: Colors.orange.shade400,
                           selected: _selectedColor == Colors.orange.shade400,
@@ -2638,16 +2677,73 @@ class _ModeChip extends StatelessWidget {
 }
 
 class _ColorDot extends StatelessWidget {
-  const _ColorDot({required this.color});
+  const _ColorDot({
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
 
   final Color color;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 18,
-      height: 18,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 20,
+        height: 20,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: selected ? Colors.white : Colors.transparent,
+            width: 2,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BoardToolButton extends StatelessWidget {
+  const _BoardToolButton({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? _primaryPurple : _textMuted;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF1A2344) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 18),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(color: color, fontSize: 9),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -2692,32 +2788,61 @@ class _Panel extends StatelessWidget {
 }
 
 class _WhiteboardPainter extends CustomPainter {
-  const _WhiteboardPainter({required this.points});
+  const _WhiteboardPainter({required this.items});
 
-  final List<_BoardPoint> points;
+  final List<_BoardItem> items;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 2.5
-      ..strokeCap = StrokeCap.round;
+    for (final item in items) {
+      if (item is _BoardStroke) {
+        if (item.points.length < 2) continue;
+        final paint = Paint()
+          ..color = item.color.withOpacity(item.opacity)
+          ..strokeWidth = item.width
+          ..strokeCap = StrokeCap.round
+          ..style = PaintingStyle.stroke;
 
-    for (var index = 0; index < points.length - 1; index++) {
-      final current = points[index];
-      final next = points[index + 1];
+        final path = Path();
+        final first = item.points.first.toOffset(size);
+        path.moveTo(first.dx, first.dy);
+        for (final point in item.points.skip(1)) {
+          final offset = point.toOffset(size);
+          path.lineTo(offset.dx, offset.dy);
+        }
+        canvas.drawPath(path, paint);
+      } else if (item is _BoardShape) {
+        final paint = Paint()
+          ..color = item.color.withOpacity(item.opacity)
+          ..strokeWidth = item.width
+          ..style = PaintingStyle.stroke;
 
-      if (current.isBreak || next.isBreak) continue;
+        final start = item.start.toOffset(size);
+        final end = item.end.toOffset(size);
+        final rect = Rect.fromPoints(start, end);
 
-      final p1 = Offset(current.x * size.width, current.y * size.height);
-      final p2 = Offset(next.x * size.width, next.y * size.height);
-      canvas.drawLine(p1, p2, paint);
+        if (item.tool == _BoardTool.circle) {
+          canvas.drawOval(rect, paint);
+        } else {
+          canvas.drawRect(rect, paint);
+        }
+      } else if (item is _BoardText) {
+        final offset = item.position.toOffset(size);
+        final painter = TextPainter(
+          text: TextSpan(
+            text: item.text,
+            style: TextStyle(color: item.color, fontSize: item.size),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        painter.paint(canvas, offset);
+      }
     }
   }
 
   @override
   bool shouldRepaint(covariant _WhiteboardPainter oldDelegate) {
-    return oldDelegate.points != points;
+    return oldDelegate.items != items;
   }
 }
 
