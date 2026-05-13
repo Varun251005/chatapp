@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:http/http.dart' as http;
@@ -2847,11 +2848,36 @@ class _WhiteboardPainter extends CustomPainter {
 }
 
 class ApiService {
-  static const String baseUrl = 'http://127.0.0.1:8000';
-  static const String wsBaseUrl = 'ws://127.0.0.1:8000/ws/chat/';
+  static String get wsBaseUrl => _wsBaseUrl;
+
+  static String get _httpBaseUrl {
+    if (kIsWeb) {
+      return Uri.base.origin;
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://10.0.2.2:8000';
+    }
+
+    return 'http://127.0.0.1:8000';
+  }
+
+  static String get _wsBaseUrl {
+    if (kIsWeb) {
+      final scheme = Uri.base.scheme == 'https' ? 'wss' : 'ws';
+      final portPart = Uri.base.hasPort ? ':${Uri.base.port}' : '';
+      return '$scheme://${Uri.base.host}$portPart/ws/chat/';
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return 'ws://10.0.2.2:8000/ws/chat/';
+    }
+
+    return 'ws://127.0.0.1:8000/ws/chat/';
+  }
 
   static Future<Map<String, dynamic>> createRoom(String nickname) async {
-    final uri = Uri.parse('$baseUrl/api/rooms/create/');
+    final uri = Uri.parse('$_httpBaseUrl/api/rooms/create/');
     final response = await http.post(
       uri,
       headers: {'Content-Type': 'application/json'},
@@ -2867,7 +2893,7 @@ class ApiService {
   }
 
   static Future<void> joinRoom(String roomId, String nickname) async {
-    final uri = Uri.parse('$baseUrl/api/rooms/join/');
+    final uri = Uri.parse('$_httpBaseUrl/api/rooms/join/');
     final response = await http.post(
       uri,
       headers: {'Content-Type': 'application/json'},
