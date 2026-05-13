@@ -2852,7 +2852,7 @@ class ApiService {
 
   static String get _httpBaseUrl {
     if (kIsWeb) {
-      return Uri.base.origin;
+      return 'http://127.0.0.1:8000';
     }
 
     if (defaultTargetPlatform == TargetPlatform.android) {
@@ -2864,9 +2864,7 @@ class ApiService {
 
   static String get _wsBaseUrl {
     if (kIsWeb) {
-      final scheme = Uri.base.scheme == 'https' ? 'wss' : 'ws';
-      final portPart = Uri.base.hasPort ? ':${Uri.base.port}' : '';
-      return '$scheme://${Uri.base.host}$portPart/ws/chat/';
+      return 'ws://127.0.0.1:8000/ws/chat/';
     }
 
     if (defaultTargetPlatform == TargetPlatform.android) {
