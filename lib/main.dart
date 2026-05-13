@@ -2884,7 +2884,7 @@ class ApiService {
       body: jsonEncode({'nickname': nickname}),
     );
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = _decodeJsonMap(response.body);
     if (response.statusCode == 200) {
       return data;
     }
@@ -2900,9 +2900,22 @@ class ApiService {
       body: jsonEncode({'room_id': roomId, 'nickname': nickname}),
     );
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = _decodeJsonMap(response.body);
     if (response.statusCode != 200) {
       throw Exception(data['error'] ?? 'Failed to join room');
     }
+  }
+
+  static Map<String, dynamic> _decodeJsonMap(String body) {
+    if (body.trim().isEmpty) {
+      return {};
+    }
+
+    final decoded = jsonDecode(body);
+    if (decoded is Map<String, dynamic>) {
+      return decoded;
+    }
+
+    return {};
   }
 }
