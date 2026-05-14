@@ -1,10 +1,16 @@
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "dev-secret-key-change-me"
-DEBUG = True
-ALLOWED_HOSTS = ["*"]
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret-key-change-me")
+DEBUG = os.getenv("DJANGO_DEBUG", "true").lower() in {"1", "true", "yes"}
+
+_allowed_hosts = os.getenv("DJANGO_ALLOWED_HOSTS", "").strip()
+if _allowed_hosts:
+    ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts.split(",") if host.strip()]
+else:
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 INSTALLED_APPS = [
     "daphne",
@@ -65,6 +71,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -74,4 +81,23 @@ CHANNEL_LAYERS = {
     }
 }
 
-CORS_ALLOW_ALL_ORIGINS = True
+_cors_allow_all = os.getenv("CORS_ALLOW_ALL_ORIGINS", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+}
+_cors_origins = os.getenv("CORS_ALLOWED_ORIGINS", "").strip()
+
+if _cors_origins:
+    CORS_ALLOWED_ORIGINS = [
+        origin.strip() for origin in _cors_origins.split(",") if origin.strip()
+    ]
+    CORS_ALLOW_ALL_ORIGINS = False
+else:
+    CORS_ALLOW_ALL_ORIGINS = _cors_allow_all
+
+_csrf_trusted = os.getenv("CSRF_TRUSTED_ORIGINS", "").strip()
+if _csrf_trusted:
+    CSRF_TRUSTED_ORIGINS = [
+        origin.strip() for origin in _csrf_trusted.split(",") if origin.strip()
+    ]
