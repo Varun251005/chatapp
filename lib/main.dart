@@ -196,13 +196,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
       final roomData = await ApiService.createRoom(widget.nickname);
       if (!mounted) return;
 
+      final roomId = roomData['room_id'] as String;
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => RoomScreen(
             nickname: widget.nickname,
-            roomId: roomData['room_id'] as String,
-            roomLink: roomData['room_link'] as String,
+            roomId: roomId,
+            roomLink: ApiService.publicRoomLink(roomId),
           ),
         ),
       );
@@ -251,7 +252,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           builder: (_) => RoomScreen(
             nickname: widget.nickname,
             roomId: roomId,
-            roomLink: '/room/$roomId',
+            roomLink: ApiService.publicRoomLink(roomId),
           ),
         ),
       );
@@ -2848,9 +2849,36 @@ class _WhiteboardPainter extends CustomPainter {
 }
 
 class ApiService {
+  static const String _httpBaseOverride = String.fromEnvironment(
+    'API_BASE_URL',
+  );
+  static const String _wsBaseOverride = String.fromEnvironment('WS_BASE_URL');
+
   static String get wsBaseUrl => _wsBaseUrl;
 
+  static String publicRoomLink(String roomId) {
+    return '${_httpBaseUrl}/room/$roomId';
+  }
+
+  static String _normalizeHttpBase(String value) {
+    if (value.endsWith('/')) {
+      return value.substring(0, value.length - 1);
+    }
+    return value;
+  }
+
+  static String _normalizeWsBase(String value) {
+    if (value.endsWith('/ws/chat/')) return value;
+    if (value.endsWith('/ws/chat')) return '$value/';
+    if (value.endsWith('/')) return '${value}ws/chat/';
+    return '$value/ws/chat/';
+  }
+
   static String get _httpBaseUrl {
+    if (_httpBaseOverride.isNotEmpty) {
+      return _normalizeHttpBase(_httpBaseOverride);
+    }
+
     if (kIsWeb) {
       return 'http://127.0.0.1:8000';
     }
@@ -2863,6 +2891,10 @@ class ApiService {
   }
 
   static String get _wsBaseUrl {
+    if (_wsBaseOverride.isNotEmpty) {
+      return _normalizeWsBase(_wsBaseOverride);
+    }
+
     if (kIsWeb) {
       return 'ws://127.0.0.1:8000/ws/chat/';
     }
