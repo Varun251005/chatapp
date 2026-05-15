@@ -2166,7 +2166,7 @@ class _RoomScreenState extends State<RoomScreen> {
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: const Icon(
-                  Icons.crop_square,
+                  PhosphorIconsLight.square,
                   color: AppColors.accent,
                   size: 20,
                 ),
@@ -2201,8 +2201,8 @@ class _RoomScreenState extends State<RoomScreen> {
                       onPressed: onToggleChat,
                       icon: Icon(
                         chatVisible
-                            ? Icons.chat_bubble
-                            : Icons.chat_bubble_outline,
+                            ? PhosphorIconsLight.chatDots
+                            : PhosphorIconsLight.chatDots,
                         color: chatVisible
                             ? AppColors.accent
                             : AppColors.textSecondary,
@@ -2230,13 +2230,13 @@ class _RoomScreenState extends State<RoomScreen> {
                   const SizedBox(width: AppSpacing.md),
                   ElevatedButton.icon(
                     onPressed: () {},
-                    icon: const Icon(Icons.person_add_alt_1, size: 16),
+                    icon: const Icon(PhosphorIconsLight.userPlus, size: 16),
                     label: const Text('Invite'),
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   IconButton(
                     onPressed: () {},
-                    icon: const Icon(Icons.more_horiz),
+                    icon: const Icon(PhosphorIconsLight.dotsThree),
                   ),
                 ],
               ),
@@ -2260,52 +2260,10 @@ class _RoomScreenState extends State<RoomScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-                  const SizedBox(width: AppSpacing.sm),
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: AppColors.accentSoft,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'J',
-                        style: TextStyle(
-                          color: AppColors.accent,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Container(
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.accent,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: AppTheme.softShadow,
-                    ),
-                    child: TextButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.person_add, color: Colors.white, size: 16),
-                      label: const Text(
-                        'Invite',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  IconButton(
+            children: [
               Text('Chat', style: Theme.of(context).textTheme.titleMedium),
-                    icon: const Icon(Icons.more_horiz),
+              const SizedBox(width: AppSpacing.sm),
+              Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.sm,
                   vertical: AppSpacing.xs,
@@ -2323,16 +2281,84 @@ class _RoomScreenState extends State<RoomScreen> {
                   ),
                 ),
               ),
+              const Spacer(),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: AppColors.accentSoft,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Center(
+                  child: Text(
+                    'J',
+                    style: TextStyle(
+                      color: AppColors.accent,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Container(
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.accent,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: AppTheme.softShadow,
+                ),
+                child: TextButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(
+                    PhosphorIconsLight.userPlus,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                  label: const Text(
+                    'Invite',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              IconButton(
+                onPressed: () {},
+                icon: const Icon(PhosphorIconsLight.dotsThree),
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
           Expanded(
             child: _messages.isEmpty
-                ? const Center(
-                    child: Text(
-                      'No messages yet',
-                      style: TextStyle(color: AppColors.textSecondary),
-                    ),
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(
+                        PhosphorIconsLight.chatsCircle,
+                        color: AppColors.accent,
+                        size: 56,
+                      ),
+                      SizedBox(height: AppSpacing.sm),
+                      Text(
+                        'No messages yet',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Start the conversation!',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
+                    ],
                   )
                 : ListView.builder(
                     itemCount: _messages.length,
@@ -2431,15 +2457,15 @@ class _RoomScreenState extends State<RoomScreen> {
               vertical: AppSpacing.xs,
             ),
             decoration: BoxDecoration(
-              color: AppColors.toolbar,
-              borderRadius: BorderRadius.circular(16),
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(color: AppColors.border),
             ),
             child: Row(
               children: [
                 IconButton(
                   onPressed: () {},
-                  icon: const Icon(Icons.add_circle_outline),
+                  icon: const Icon(PhosphorIconsLight.plusCircle),
                   color: AppColors.textSecondary,
                 ),
                 Expanded(
@@ -2465,7 +2491,7 @@ class _RoomScreenState extends State<RoomScreen> {
                   child: IconButton(
                     padding: EdgeInsets.zero,
                     onPressed: _sendMessage,
-                    icon: const Icon(Icons.send_rounded, size: 18),
+                    icon: const Icon(PhosphorIconsLight.paperPlaneRight, size: 18),
                     color: Colors.white,
                   ),
                 ),
@@ -2521,55 +2547,41 @@ class _RoomScreenState extends State<RoomScreen> {
                 spacing: AppSpacing.sm,
                 runSpacing: AppSpacing.sm,
                 children: [
-                  OutlinedButton.icon(
+                  _PillActionButton(
+                    label: 'Join Call',
+                    icon: PhosphorIconsLight.phoneCall,
                     onPressed: _isInCall ? null : _joinVoiceCall,
-                    icon: const Icon(Icons.call),
-                    label: const Text('Join Call'),
+                    isPrimary: !_isInCall,
                   ),
-                  OutlinedButton.icon(
-                    onPressed: _isInCall
-                        ? () => _leaveVoiceCall(notifyOthers: true)
-                        : null,
-                    icon: const Icon(Icons.call_end),
-                    label: const Text('Leave'),
+                  _PillActionButton(
+                    label: 'Leave',
+                    icon: PhosphorIconsLight.phoneX,
+                    onPressed:
+                        _isInCall ? () => _leaveVoiceCall(notifyOthers: true) : null,
                   ),
-                  OutlinedButton.icon(
+                  _PillActionButton(
+                    label: _isMuted ? 'Unmute' : 'Mute',
+                    icon: _isMuted ? PhosphorIconsLight.microphoneSlash : PhosphorIconsLight.microphone,
                     onPressed: _isInCall ? _toggleMute : null,
-                    icon: Icon(_isMuted ? Icons.mic_off : Icons.mic),
-                    label: Text(_isMuted ? 'Unmute' : 'Mute'),
                   ),
-                  OutlinedButton.icon(
+                  _PillActionButton(
+                    label: _isCameraOn ? 'Camera On' : 'Camera Off',
+                    icon: _isCameraOn ? PhosphorIconsLight.videoCamera : PhosphorIconsLight.videoCameraSlash,
                     onPressed: _isInCall ? _toggleCamera : null,
-                    icon: Icon(
-                      _isCameraOn ? Icons.videocam : Icons.videocam_off,
-                    ),
-                    label: Text(
-                      _isCameraOn ? 'Camera On' : 'Camera Off',
-                    ),
                   ),
-                  OutlinedButton.icon(
+                  _PillActionButton(
+                    label: _isVideoMode ? 'Switch to Audio' : 'Switch to Video',
+                    icon: _isVideoMode ? PhosphorIconsLight.waveform : PhosphorIconsLight.videoCamera,
                     onPressed: _switchAudioVideoMode,
-                    icon: Icon(
-                      _isVideoMode ? Icons.voicemail : Icons.video_call,
-                    ),
-                    label: Text(
-                      _isVideoMode ? 'Switch to Audio' : 'Switch to Video',
-                    ),
                   ),
-                  OutlinedButton.icon(
+                  _PillActionButton(
+                    label: _isScreenSharing ? 'Stop Share' : 'Start Share',
+                    icon: _isScreenSharing
+                        ? PhosphorIconsLight.monitorX
+                        : PhosphorIconsLight.monitorArrowUp,
                     onPressed: _isInCall && _isVideoMode
-                        ? (_isScreenSharing
-                              ? _stopScreenShare
-                              : _startScreenShare)
+                        ? (_isScreenSharing ? _stopScreenShare : _startScreenShare)
                         : null,
-                    icon: Icon(
-                      _isScreenSharing
-                          ? Icons.stop_screen_share
-                          : Icons.screen_share,
-                    ),
-                    label: Text(
-                      _isScreenSharing ? 'Stop Share' : 'Start Share',
-                    ),
                   ),
                 ],
               ),
@@ -2597,21 +2609,21 @@ class _RoomScreenState extends State<RoomScreen> {
                   ),
                   OutlinedButton.icon(
                     onPressed: _clearBoard,
-                    icon: const Icon(Icons.cleaning_services_outlined),
+                    icon: const Icon(PhosphorIconsLight.broom),
                     label: const Text('Clear'),
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.lg),
               Center(
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
-                    vertical: AppSpacing.xs,
+                    horizontal: AppSpacing.xl,
+                    vertical: AppSpacing.sm,
                   ),
                   decoration: BoxDecoration(
                     color: AppColors.card,
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(999),
                     border: Border.all(color: AppColors.border),
                     boxShadow: AppTheme.softShadow,
                   ),
@@ -2667,7 +2679,7 @@ class _RoomScreenState extends State<RoomScreen> {
                           _selectedTool = _BoardTool.text;
                         }),
                       ),
-                      const SizedBox(width: AppSpacing.sm),
+                      const SizedBox(width: AppSpacing.md),
                       _ColorDot(
                         color: Colors.white,
                         selected: _selectedColor == Colors.white,
@@ -2707,9 +2719,9 @@ class _RoomScreenState extends State<RoomScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.lg),
               SizedBox(
-                height: 320,
+                height: 420,
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final canvasSize = Size(
@@ -2735,7 +2747,7 @@ class _RoomScreenState extends State<RoomScreen> {
                         decoration: BoxDecoration(
                           color: _boardBgColor,
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: AppColors.border),
+                          border: Border.all(color: AppColors.canvasBorder),
                         ),
                         child: Stack(
                           children: [
@@ -2774,7 +2786,7 @@ class _RoomScreenState extends State<RoomScreen> {
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppColors.border),
         boxShadow: AppTheme.softShadow,
       ),
@@ -2784,27 +2796,27 @@ class _RoomScreenState extends State<RoomScreen> {
           Text('Workspace', style: textTheme.titleMedium),
           const SizedBox(height: AppSpacing.md),
           _SidebarNavItem(
-            icon: Icons.dashboard_outlined,
+            icon: PhosphorIconsLight.squaresFour,
             label: 'Overview',
             active: false,
           ),
           _SidebarNavItem(
-            icon: Icons.draw_outlined,
+            icon: PhosphorIconsLight.penNib,
             label: 'Whiteboard',
             active: true,
           ),
           _SidebarNavItem(
-            icon: Icons.chat_bubble_outline,
+            icon: PhosphorIconsLight.chatDots,
             label: 'Chat',
             active: false,
           ),
           _SidebarNavItem(
-            icon: Icons.groups_outlined,
+            icon: PhosphorIconsLight.users,
             label: 'Participants',
             active: false,
           ),
           _SidebarNavItem(
-            icon: Icons.settings_outlined,
+            icon: PhosphorIconsLight.gear,
             label: 'Settings',
             active: false,
           ),
@@ -2931,12 +2943,7 @@ class _RoomScreenState extends State<RoomScreen> {
 
             if (width < 720) {
               return Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  AppSpacing.sm,
-                  AppSpacing.lg,
-                  AppSpacing.lg,
-                ),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   children: [
                     Expanded(
@@ -2959,15 +2966,15 @@ class _RoomScreenState extends State<RoomScreen> {
                       },
                       destinations: const [
                         NavigationDestination(
-                          icon: Icon(Icons.draw_outlined),
+                          icon: Icon(PhosphorIconsLight.penNib),
                           label: 'Board',
                         ),
                         NavigationDestination(
-                          icon: Icon(Icons.chat_bubble_outline),
+                          icon: Icon(PhosphorIconsLight.chatDots),
                           label: 'Chat',
                         ),
                         NavigationDestination(
-                          icon: Icon(Icons.groups_outlined),
+                          icon: Icon(PhosphorIconsLight.users),
                           label: 'People',
                         ),
                       ],
@@ -2979,12 +2986,7 @@ class _RoomScreenState extends State<RoomScreen> {
 
             if (width < 1100) {
               return Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  AppSpacing.sm,
-                  AppSpacing.lg,
-                  AppSpacing.lg,
-                ),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -3005,12 +3007,7 @@ class _RoomScreenState extends State<RoomScreen> {
             }
 
             return Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.sm,
-                AppSpacing.lg,
-                AppSpacing.lg,
-              ),
+              padding: const EdgeInsets.all(AppSpacing.md),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -3065,6 +3062,52 @@ class _SidebarNavItem extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PillActionButton extends StatelessWidget {
+  const _PillActionButton({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+    this.isPrimary = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final bool isPrimary;
+
+  @override
+  Widget build(BuildContext context) {
+    final isEnabled = onPressed != null;
+    final bgColor = isPrimary ? AppColors.accent : Colors.white;
+    final borderColor = isPrimary ? AppColors.accent : AppColors.border;
+    final textColor = isPrimary ? Colors.white : AppColors.textPrimary;
+
+    return SizedBox(
+      height: 44,
+      child: TextButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 16, color: isEnabled ? textColor : AppColors.textSecondary),
+        label: Text(
+          label,
+          style: TextStyle(
+            color: isEnabled ? textColor : AppColors.textSecondary,
+            fontWeight: FontWeight.w500,
+            fontSize: 13,
+          ),
+        ),
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          backgroundColor: isEnabled ? bgColor : AppColors.background,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: borderColor),
+          ),
+        ),
       ),
     );
   }
@@ -3256,8 +3299,8 @@ class _BoardToolIconButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.all(8),
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
           color: selected ? AppColors.accentSoft : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
