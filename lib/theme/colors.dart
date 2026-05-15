@@ -14,4 +14,5 @@ class AppColors {
   static const Color chatIncoming = Color(0xFFF5F5F5);
   static const Color toolbar = Color(0xFFFDF9F6);
   static const Color iconMuted = Color(0xFF9CA3AF);
+  static const Color canvasBorder = Color(0xFFF1EAE5);
 }
