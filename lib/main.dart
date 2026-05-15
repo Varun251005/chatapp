@@ -480,6 +480,8 @@ class _RoomScreenState extends State<RoomScreen> {
   List<Map<String, dynamic>> _participants = [];
   String? _hostNickname;
   bool _presentationMode = false;
+  int _mobileTabIndex = 0;
+  bool _showChatPanel = true;
 
   static const int _maxUsersInCall = 6;
 
@@ -2029,7 +2031,12 @@ class _RoomScreenState extends State<RoomScreen> {
     _messageController.clear();
   }
 
-  PreferredSizeWidget _buildRoomHeader(BuildContext context) {
+  PreferredSizeWidget _buildRoomHeader(
+    BuildContext context, {
+    bool showChatToggle = false,
+    bool chatVisible = false,
+    VoidCallback? onToggleChat,
+  }) {
     final textTheme = Theme.of(context).textTheme;
     final displayParticipants = _participants.take(4).toList();
 
@@ -2078,6 +2085,18 @@ class _RoomScreenState extends State<RoomScreen> {
               ),
               Row(
                 children: [
+                  if (showChatToggle)
+                    IconButton(
+                      onPressed: onToggleChat,
+                      icon: Icon(
+                        chatVisible
+                            ? Icons.chat_bubble
+                            : Icons.chat_bubble_outline,
+                        color: chatVisible
+                            ? AppColors.accent
+                            : AppColors.textSecondary,
+                      ),
+                    ),
                   ...displayParticipants.map((participant) {
                     final nickname = participant['nickname']?.toString() ?? '';
                     final initials = nickname.isNotEmpty
@@ -2117,6 +2136,294 @@ class _RoomScreenState extends State<RoomScreen> {
     );
   }
 
+  Widget _buildCenterContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _Panel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_presentationMode)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: Text(
+                    _isHost
+                        ? 'Presentation mode is ON (only host speaks)'
+                        : 'Presentation mode is ON (host only speaks)',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              if (_isMutedByHost)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: Text(
+                    'You are muted by host',
+                    style: TextStyle(color: AppColors.danger),
+                  ),
+                ),
+              const Text(
+                'Share room link',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              SelectableText(
+                widget.roomLink,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _isInCall ? null : _joinVoiceCall,
+                    icon: const Icon(Icons.call),
+                    label: const Text('Join Call'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _isInCall
+                        ? () => _leaveVoiceCall(notifyOthers: true)
+                        : null,
+                    icon: const Icon(Icons.call_end),
+                    label: const Text('Leave'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _isInCall ? _toggleMute : null,
+                    icon: Icon(_isMuted ? Icons.mic_off : Icons.mic),
+                    label: Text(_isMuted ? 'Unmute' : 'Mute'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _isInCall ? _toggleCamera : null,
+                    icon: Icon(
+                      _isCameraOn ? Icons.videocam : Icons.videocam_off,
+                    ),
+                    label: Text(
+                      _isCameraOn ? 'Camera On' : 'Camera Off',
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _switchAudioVideoMode,
+                    icon: Icon(
+                      _isVideoMode ? Icons.voicemail : Icons.video_call,
+                    ),
+                    label: Text(
+                      _isVideoMode ? 'Switch to Audio' : 'Switch to Video',
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _isInCall && _isVideoMode
+                        ? (_isScreenSharing
+                              ? _stopScreenShare
+                              : _startScreenShare)
+                        : null,
+                    icon: Icon(
+                      _isScreenSharing
+                          ? Icons.stop_screen_share
+                          : Icons.screen_share,
+                    ),
+                    label: Text(
+                      _isScreenSharing ? 'Stop Share' : 'Start Share',
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        if (_isInCall && _isVideoMode) ...[
+          _buildVideoGrid(),
+          const SizedBox(height: AppSpacing.md),
+        ],
+        _Panel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Shared Whiteboard',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _clearBoard,
+                    icon: const Icon(Icons.cleaning_services_outlined),
+                    label: const Text('Clear'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.xs,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.card,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: AppColors.border),
+                    boxShadow: AppTheme.softShadow,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _BoardToolIconButton(
+                        icon: PhosphorIconsLight.pencilSimple,
+                        selected: _selectedTool == _BoardTool.pen,
+                        onTap: () => setState(() {
+                          _selectedTool = _BoardTool.pen;
+                        }),
+                      ),
+                      _BoardToolIconButton(
+                        icon: PhosphorIconsLight.pencil,
+                        selected: _selectedTool == _BoardTool.pencil,
+                        onTap: () => setState(() {
+                          _selectedTool = _BoardTool.pencil;
+                        }),
+                      ),
+                      _BoardToolIconButton(
+                        icon: PhosphorIconsLight.highlighter,
+                        selected: _selectedTool == _BoardTool.marker,
+                        onTap: () => setState(() {
+                          _selectedTool = _BoardTool.marker;
+                        }),
+                      ),
+                      _BoardToolIconButton(
+                        icon: PhosphorIconsLight.eraser,
+                        selected: _selectedTool == _BoardTool.eraser,
+                        onTap: () => setState(() {
+                          _selectedTool = _BoardTool.eraser;
+                        }),
+                      ),
+                      _BoardToolIconButton(
+                        icon: PhosphorIconsLight.square,
+                        selected: _selectedTool == _BoardTool.rect,
+                        onTap: () => setState(() {
+                          _selectedTool = _BoardTool.rect;
+                        }),
+                      ),
+                      _BoardToolIconButton(
+                        icon: PhosphorIconsLight.circle,
+                        selected: _selectedTool == _BoardTool.circle,
+                        onTap: () => setState(() {
+                          _selectedTool = _BoardTool.circle;
+                        }),
+                      ),
+                      _BoardToolIconButton(
+                        icon: PhosphorIconsLight.textT,
+                        selected: _selectedTool == _BoardTool.text,
+                        onTap: () => setState(() {
+                          _selectedTool = _BoardTool.text;
+                        }),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      _ColorDot(
+                        color: Colors.white,
+                        selected: _selectedColor == Colors.white,
+                        onTap: () => setState(() {
+                          _selectedColor = Colors.white;
+                        }),
+                      ),
+                      _ColorDot(
+                        color: Colors.green.shade500,
+                        selected: _selectedColor == Colors.green.shade500,
+                        onTap: () => setState(() {
+                          _selectedColor = Colors.green.shade500;
+                        }),
+                      ),
+                      _ColorDot(
+                        color: Colors.blue.shade400,
+                        selected: _selectedColor == Colors.blue.shade400,
+                        onTap: () => setState(() {
+                          _selectedColor = Colors.blue.shade400;
+                        }),
+                      ),
+                      _ColorDot(
+                        color: Colors.purple.shade400,
+                        selected: _selectedColor == Colors.purple.shade400,
+                        onTap: () => setState(() {
+                          _selectedColor = Colors.purple.shade400;
+                        }),
+                      ),
+                      _ColorDot(
+                        color: Colors.orange.shade400,
+                        selected: _selectedColor == Colors.orange.shade400,
+                        onTap: () => setState(() {
+                          _selectedColor = Colors.orange.shade400;
+                        }),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              SizedBox(
+                height: 320,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final canvasSize = Size(
+                      constraints.maxWidth,
+                      constraints.maxHeight,
+                    );
+
+                    return GestureDetector(
+                      onTapDown: (details) {
+                        if (_selectedTool == _BoardTool.text) {
+                          _addTextAt(
+                            details.localPosition,
+                            canvasSize,
+                          );
+                        }
+                      },
+                      onPanStart: (details) =>
+                          _onBoardPanStart(details, canvasSize),
+                      onPanUpdate: (details) =>
+                          _onBoardPanUpdate(details, canvasSize),
+                      onPanEnd: (_) => _onBoardPanEnd(),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: _boardBgColor,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: CustomPaint(
+                                painter: _WhiteboardGridPainter(),
+                              ),
+                            ),
+                            Positioned.fill(
+                              child: CustomPaint(
+                                painter: _WhiteboardPainter(
+                                  items: _boardItems,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSidebar(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final participants = _participants;
@@ -2125,336 +2432,128 @@ class _RoomScreenState extends State<RoomScreen> {
       width: 240,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
-        boxShadow: AppTheme.softShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Workspace', style: textTheme.titleMedium),
-          const SizedBox(height: AppSpacing.md),
-          _SidebarNavItem(
-            icon: Icons.dashboard_outlined,
-            label: 'Overview',
-            active: false,
+        return Scaffold(
+          appBar: LayoutBuilder(
+            builder: (context, constraints) {
+              final isCompact = constraints.maxWidth < 1100;
+              return _buildRoomHeader(
+                context,
+                showChatToggle: isCompact,
+                chatVisible: _showChatPanel,
+                onToggleChat: isCompact
+                    ? () {
+                        setState(() {
+                          _showChatPanel = !_showChatPanel;
+                        });
+                      }
+                    : null,
+              );
+            },
           ),
-          _SidebarNavItem(
-            icon: Icons.draw_outlined,
-            label: 'Whiteboard',
-            active: true,
-          ),
-          _SidebarNavItem(
-            icon: Icons.chat_bubble_outline,
-            label: 'Chat',
-            active: false,
-          ),
-          _SidebarNavItem(
-            icon: Icons.groups_outlined,
-            label: 'Participants',
-            active: false,
-          ),
-          _SidebarNavItem(
-            icon: Icons.settings_outlined,
-            label: 'Settings',
-            active: false,
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Text('Participants', style: textTheme.titleMedium),
-          const SizedBox(height: AppSpacing.sm),
-          Expanded(
-            child: ListView.separated(
-              itemCount: participants.length,
-              separatorBuilder: (_, __) => const Divider(height: 16),
-              itemBuilder: (context, index) {
-                final participant = participants[index];
-                final nickname = participant['nickname']?.toString() ?? 'Guest';
-                final isHost = participant['is_host'] == true;
-                final initials = nickname.isNotEmpty
-                    ? nickname.characters.first.toUpperCase()
-                    : '?';
+          body: _GradientBackground(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final width = constraints.maxWidth;
 
-                return Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 16,
-                      backgroundColor: AppColors.accentSoft,
-                      child: Text(
-                        initials,
-                        style: textTheme.labelMedium?.copyWith(
-                          color: AppColors.accent,
-                        ),
-                      ),
+                if (width < 720) {
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.sm,
+                      AppSpacing.lg,
+                      AppSpacing.lg,
                     ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Text(
-                        nickname,
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    if (isHost)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.accentSoft,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          'Host',
-                          style: textTheme.labelMedium?.copyWith(
-                            color: AppColors.accent,
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: IndexedStack(
+                            index: _mobileTabIndex,
+                            children: [
+                              SingleChildScrollView(
+                                child: _buildCenterContent(),
+                              ),
+                              _buildChatPanel(context),
+                              _buildSidebar(context),
+                            ],
                           ),
                         ),
-                      ),
-                  ],
+                        const SizedBox(height: AppSpacing.sm),
+                        NavigationBar(
+                          selectedIndex: _mobileTabIndex,
+                          onDestinationSelected: (index) {
+                            setState(() {
+                              _mobileTabIndex = index;
+                            });
+                          },
+                          destinations: const [
+                            NavigationDestination(
+                              icon: Icon(Icons.draw_outlined),
+                              label: 'Board',
+                            ),
+                            NavigationDestination(
+                              icon: Icon(Icons.chat_bubble_outline),
+                              label: 'Chat',
+                            ),
+                            NavigationDestination(
+                              icon: Icon(Icons.groups_outlined),
+                              label: 'People',
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                if (width < 1100) {
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.sm,
+                      AppSpacing.lg,
+                      AppSpacing.lg,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(width: 220, child: _buildSidebar(context)),
+                        const SizedBox(width: AppSpacing.lg),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: _buildCenterContent(),
+                          ),
+                        ),
+                        if (_showChatPanel) ...[
+                          const SizedBox(width: AppSpacing.lg),
+                          SizedBox(width: 320, child: _buildChatPanel(context)),
+                        ],
+                      ],
+                    ),
+                  );
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildSidebar(context),
+                      const SizedBox(width: AppSpacing.lg),
+                      Expanded(child: _buildCenterContent()),
+                      const SizedBox(width: AppSpacing.lg),
+                      SizedBox(width: 320, child: _buildChatPanel(context)),
+                    ],
+                  ),
                 );
               },
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildChatPanel(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
-        boxShadow: AppTheme.softShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Chat', style: Theme.of(context).textTheme.titleMedium),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: AppSpacing.xs,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.accentSoft,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Text(
-                  'Live',
-                  style: TextStyle(
-                    color: AppColors.accent,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Expanded(
-            child: _messages.isEmpty
-                ? const Center(
-                    child: Text(
-                      'No messages yet',
-                      style: TextStyle(color: AppColors.textSecondary),
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: _messages.length,
-                    itemBuilder: (context, index) {
-                      final item = _messages[index];
-                      final isMine = item['nickname'] == widget.nickname;
-
-                      if (isMine) {
-                        return Align(
-                          alignment: Alignment.centerRight,
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(vertical: 6),
-                            constraints: const BoxConstraints(maxWidth: 240),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.accent,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Text(
-                              item['message'] ?? '',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        );
-                      }
-
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            CircleAvatar(
-                              radius: 14,
-                              backgroundColor: AppColors.accentSoft,
-                              child: Text(
-                                (item['nickname'] ?? '?')
-                                    .characters
-                                    .first
-                                    .toUpperCase(),
-                                style: const TextStyle(
-                                  color: AppColors.accent,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Flexible(
-                              child: Container(
-                                constraints: const BoxConstraints(maxWidth: 240),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.chatIncoming,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: AppColors.border),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item['nickname'] ?? 'Unknown',
-                                      style: const TextStyle(
-                                        color: AppColors.textSecondary,
-                                        fontSize: 11,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      item['message'] ?? '',
-                                      style: const TextStyle(
-                                        color: AppColors.textPrimary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: AppSpacing.xs,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.toolbar,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Row(
-              children: [
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.add_circle_outline),
-                  color: AppColors.textSecondary,
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      hintText: 'Type a message...',
-                      border: InputBorder.none,
-                      filled: false,
-                      contentPadding: EdgeInsets.symmetric(vertical: 10),
-                    ),
-                    onSubmitted: (_) => _sendMessage(),
-                  ),
-                ),
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: AppColors.accent,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: IconButton(
-                    padding: EdgeInsets.zero,
-                    onPressed: _sendMessage,
-                    icon: const Icon(Icons.send_rounded, size: 18),
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_isInCall) {
-      final textTheme = Theme.of(context).textTheme;
-      return Scaffold(
-        appBar: AppBar(
-          titleSpacing: 0,
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _isVideoMode ? 'Study Group Video' : 'Study Group Voice',
-                style: textTheme.titleMedium,
-              ),
-              Text(
-                '${_peers.length + 1} members${_presentationMode ? ' • Presentation' : ''}',
-                style: textTheme.labelMedium?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            if (_isHost)
-              IconButton(
-                onPressed: _openHostControlsSheet,
-                icon: const Icon(Icons.admin_panel_settings_outlined),
-              ),
-            const SizedBox(width: AppSpacing.sm),
-          ],
-        ),
-        body: _GradientBackground(
-          child: _isVideoMode
-              ? _buildVideoCallScreen()
-              : _buildVoiceCallScreen(),
-        ),
-      );
-    }
-
-    return Scaffold(
-      appBar: _buildRoomHeader(context),
-      body: _GradientBackground(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
+        );
             AppSpacing.lg,
             AppSpacing.sm,
             AppSpacing.lg,
