@@ -2135,29 +2135,43 @@ class _RoomScreenState extends State<RoomScreen> {
     final displayParticipants = _participants.take(4).toList();
 
     return PreferredSize(
-      preferredSize: const Size.fromHeight(72),
+      preferredSize: const Size.fromHeight(80),
       child: SafeArea(
         bottom: false,
         child: Container(
-          height: 72,
+          height: 80,
           margin: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
+            AppSpacing.md,
             AppSpacing.sm,
-            AppSpacing.lg,
+            AppSpacing.md,
             AppSpacing.sm,
           ),
           padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
+            horizontal: AppSpacing.xl,
             vertical: AppSpacing.sm,
           ),
           decoration: BoxDecoration(
             color: AppColors.card,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(color: AppColors.border),
             boxShadow: AppTheme.softShadow,
           ),
           child: Row(
             children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.accentSoft,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.crop_square,
+                  color: AppColors.accent,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2165,7 +2179,10 @@ class _RoomScreenState extends State<RoomScreen> {
                   children: [
                     Text(
                       'Room ${widget.roomId}',
-                      style: textTheme.titleMedium,
+                      style: textTheme.displaySmall?.copyWith(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -2243,10 +2260,52 @@ class _RoomScreenState extends State<RoomScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
+                  const SizedBox(width: AppSpacing.sm),
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: AppColors.accentSoft,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'J',
+                        style: TextStyle(
+                          color: AppColors.accent,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Container(
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.accent,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: AppTheme.softShadow,
+                    ),
+                    child: TextButton.icon(
+                      onPressed: () {},
+                      icon: const Icon(Icons.person_add, color: Colors.white, size: 16),
+                      label: const Text(
+                        'Invite',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  IconButton(
               Text('Chat', style: Theme.of(context).textTheme.titleMedium),
-              Container(
+                    icon: const Icon(Icons.more_horiz),
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.sm,
                   vertical: AppSpacing.xs,
