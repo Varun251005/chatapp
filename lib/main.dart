@@ -69,65 +69,106 @@ class _NicknameScreenState extends State<NicknameScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Scaffold(
-      body: _GradientBackground(
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 30),
-                const Icon(
-                  Icons.chat_bubble_rounded,
-                  size: 64,
-                  color: _primaryPurple,
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  'EchoRoom',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: _primaryPurple,
-                    fontSize: 34,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Join a room. Connect instantly.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: _textMuted),
-                ),
-                const SizedBox(height: 24),
-                _Panel(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Text(
-                        'Enter your nickname',
-                        style: TextStyle(
-                          color: _textPrimary,
-                          fontWeight: FontWeight.w600,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        toolbarHeight: 56,
+        leading: Navigator.of(context).canPop()
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, size: 20),
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
+        title: const Text('Room'),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: AppSpacing.lg),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: 4,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.accentSoft,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              'DEBUG',
+              style: TextStyle(
+                color: AppColors.accent,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xl,
+              vertical: AppSpacing.lg,
+            ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 350),
+                builder: (context, value, child) {
+                  return Opacity(opacity: value, child: child);
+                },
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          color: AppColors.accentSoft,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.person_outline,
+                          color: AppColors.accent,
+                          size: 32,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _nicknameController,
-                        decoration: const InputDecoration(
-                          hintText: 'Type your nickname',
-                          prefixIcon: Icon(Icons.person_outline),
-                        ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Text(
+                      'Enter your nickname',
+                      textAlign: TextAlign.center,
+                      style: textTheme.displaySmall?.copyWith(
+                        fontWeight: FontWeight.w700,
                       ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _continueToLobby,
-                        child: const Text('Continue'),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    const Text(
+                      'This is how others will see you in the room.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 14,
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    AppTextField(
+                      controller: _nicknameController,
+                      hintText: 'Type your nickname',
+                      prefixIcon: Icons.person_outline,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    PrimaryButton(
+                      label: 'Continue',
+                      onPressed: _continueToLobby,
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -247,77 +288,130 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        foregroundColor: _textPrimary,
+        toolbarHeight: 56,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, size: 20),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: const Text('Room'),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: AppSpacing.lg),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: 4,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.accentSoft,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              'DEBUG',
+              style: TextStyle(
+                color: AppColors.accent,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
       ),
-      body: _GradientBackground(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _Panel(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xl,
+              vertical: AppSpacing.lg,
+            ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 540),
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 350),
+                builder: (context, value, child) {
+                  return Opacity(opacity: value, child: child);
+                },
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text(
-                      'Create a Room',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: _textPrimary,
+                    Center(
+                      child: Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          color: AppColors.accentSoft,
+                          shape: BoxShape.circle,
+                          boxShadow: AppTheme.softShadow,
+                        ),
+                        child: const Icon(
+                          Icons.groups_outlined,
+                          color: AppColors.accent,
+                          size: 32,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.lg),
                     Text(
-                      'Hello ${widget.nickname}. Room ID will appear after you tap Create Room.',
-                      style: const TextStyle(color: _textMuted),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _isLoading ? null : _createRoom,
-                      child: const Text('Create Room'),
-                    ),
-                    if (_isLoading) ...[
-                      const SizedBox(height: 12),
-                      const Center(child: CircularProgressIndicator()),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              _Panel(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Join a Room',
-                      style: TextStyle(
-                        fontSize: 20,
+                      "Let's connect!",
+                      textAlign: TextAlign.center,
+                      style: textTheme.displaySmall?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: _textPrimary,
+                        fontSize: 32,
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _linkController,
-                      decoration: const InputDecoration(
-                        hintText: 'Enter room link or ID',
+                    const SizedBox(height: AppSpacing.sm),
+                    const Text(
+                      'Create a new room or join an existing one.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 14,
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    ElevatedButton(
-                      onPressed: _isLoading ? null : _joinRoom,
-                      child: const Text('Join Room'),
+                    const SizedBox(height: AppSpacing.xl),
+                    ActionCard(
+                      icon: Icons.add,
+                      title: 'Create a Room',
+                      description: 'Start a new room and invite others.',
+                      onTap: _isLoading ? null : _createRoom,
+                      trailing: _isLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.arrow_forward_ios, size: 16),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    ActionCard(
+                      icon: Icons.meeting_room_outlined,
+                      title: 'Join a Room',
+                      description: 'Enter a room link or ID to join.',
+                      child: Column(
+                        children: [
+                          const SizedBox(height: AppSpacing.md),
+                          AppTextField(
+                            controller: _linkController,
+                            hintText: 'Enter room link or ID',
+                            prefixIcon: Icons.link,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          PrimaryButton(
+                            label: 'Join Room',
+                            onPressed: _isLoading ? null : _joinRoom,
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -3230,6 +3324,221 @@ class _WhiteboardGridPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _WhiteboardGridPainter oldDelegate) {
     return false;
+  }
+}
+
+class SectionTitle extends StatelessWidget {
+  const SectionTitle({required this.title, super.key});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      textAlign: TextAlign.center,
+      style: Theme.of(context).textTheme.displaySmall?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+    );
+  }
+}
+
+class AppTextField extends StatefulWidget {
+  const AppTextField({
+    required this.controller,
+    required this.hintText,
+    required this.prefixIcon,
+    super.key,
+  });
+
+  final TextEditingController controller;
+  final String hintText;
+  final IconData prefixIcon;
+
+  @override
+  State<AppTextField> createState() => _AppTextFieldState();
+}
+
+class _AppTextFieldState extends State<AppTextField> {
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isFocused = _focusNode.hasFocus;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      height: 56,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isFocused ? AppColors.accent : AppColors.border,
+        ),
+        boxShadow: AppTheme.softShadow,
+      ),
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      child: Row(
+        children: [
+          Icon(widget.prefixIcon, color: AppColors.textSecondary, size: 18),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: TextField(
+              controller: widget.controller,
+              focusNode: _focusNode,
+              decoration: InputDecoration(
+                hintText: widget.hintText,
+                border: InputBorder.none,
+                isDense: true,
+                hintStyle: const TextStyle(color: AppColors.textSecondary),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class PrimaryButton extends StatefulWidget {
+  const PrimaryButton({
+    required this.label,
+    required this.onPressed,
+    super.key,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  State<PrimaryButton> createState() => _PrimaryButtonState();
+}
+
+class _PrimaryButtonState extends State<PrimaryButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = widget.onPressed != null;
+    return GestureDetector(
+      onTapDown: enabled
+          ? (_) => setState(() {
+                _pressed = true;
+              })
+          : null,
+      onTapUp: enabled
+          ? (_) => setState(() {
+                _pressed = false;
+              })
+          : null,
+      onTapCancel: () => setState(() {
+        _pressed = false;
+      }),
+      onTap: widget.onPressed,
+      child: AnimatedScale(
+        scale: _pressed ? 0.98 : 1,
+        duration: const Duration(milliseconds: 120),
+        child: Container(
+          height: 52,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: enabled ? AppColors.accent : AppColors.border,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: enabled ? AppTheme.softShadow : null,
+          ),
+          child: Text(
+            widget.label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ActionCard extends StatelessWidget {
+  const ActionCard({
+    required this.icon,
+    required this.title,
+    required this.description,
+    this.onTap,
+    this.trailing,
+    this.child,
+    super.key,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+  final VoidCallback? onTap;
+  final Widget? trailing;
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.border),
+          boxShadow: AppTheme.softShadow,
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.accentSoft,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(icon, color: AppColors.accent, size: 20),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        description,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (trailing != null) trailing!,
+              ],
+            ),
+            if (child != null) child!,
+          ],
+        ),
+      ),
+    );
   }
 }
 
