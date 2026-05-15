@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:http/http.dart' as http;
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'theme/app_theme.dart';
@@ -2543,213 +2544,177 @@ class _RoomScreenState extends State<RoomScreen> {
                               const Text(
                                 'Shared Whiteboard',
                                 style: TextStyle(
-                                  color: _textPrimary,
+                                  color: AppColors.textPrimary,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
                               OutlinedButton.icon(
                                 onPressed: _clearBoard,
-                                icon:
-                                    const Icon(Icons.cleaning_services_outlined),
+                                icon: const Icon(Icons.cleaning_services_outlined),
                                 label: const Text('Clear'),
                               ),
                             ],
                           ),
-                          const SizedBox(height: AppSpacing.sm),
-                          SizedBox(
-                            height: 210,
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 52,
-                                  margin: const EdgeInsets.only(
-                                    right: AppSpacing.sm,
+                          const SizedBox(height: AppSpacing.md),
+                          Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.lg,
+                                vertical: AppSpacing.xs,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.card,
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(color: AppColors.border),
+                                boxShadow: AppTheme.softShadow,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _BoardToolIconButton(
+                                    icon: PhosphorIconsLight.pencilSimple,
+                                    selected: _selectedTool == _BoardTool.pen,
+                                    onTap: () => setState(() {
+                                      _selectedTool = _BoardTool.pen;
+                                    }),
                                   ),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: AppSpacing.xs,
+                                  _BoardToolIconButton(
+                                    icon: PhosphorIconsLight.pencil,
+                                    selected: _selectedTool == _BoardTool.pencil,
+                                    onTap: () => setState(() {
+                                      _selectedTool = _BoardTool.pencil;
+                                    }),
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.card,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: AppColors.border),
+                                  _BoardToolIconButton(
+                                    icon: PhosphorIconsLight.highlighter,
+                                    selected: _selectedTool == _BoardTool.marker,
+                                    onTap: () => setState(() {
+                                      _selectedTool = _BoardTool.marker;
+                                    }),
                                   ),
-                                  child: Scrollbar(
-                                    thumbVisibility: true,
-                                    child: SingleChildScrollView(
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          _BoardToolButton(
-                                            icon: Icons.brush_outlined,
-                                            label: 'Pen',
-                                            selected:
-                                                _selectedTool == _BoardTool.pen,
-                                            onTap: () => setState(() {
-                                              _selectedTool = _BoardTool.pen;
-                                            }),
-                                          ),
-                                          _BoardToolButton(
-                                            icon: Icons.edit,
-                                            label: 'Pencil',
-                                            selected: _selectedTool ==
-                                                _BoardTool.pencil,
-                                            onTap: () => setState(() {
-                                              _selectedTool = _BoardTool.pencil;
-                                            }),
-                                          ),
-                                          _BoardToolButton(
-                                            icon: Icons.format_paint,
-                                            label: 'Marker',
-                                            selected: _selectedTool ==
-                                                _BoardTool.marker,
-                                            onTap: () => setState(() {
-                                              _selectedTool = _BoardTool.marker;
-                                            }),
-                                          ),
-                                          _BoardToolButton(
-                                            icon: Icons.auto_fix_off,
-                                            label: 'Eraser',
-                                            selected: _selectedTool ==
-                                                _BoardTool.eraser,
-                                            onTap: () => setState(() {
-                                              _selectedTool = _BoardTool.eraser;
-                                            }),
-                                          ),
-                                          _BoardToolButton(
-                                            icon: Icons.crop_square_outlined,
-                                            label: 'Rect',
-                                            selected:
-                                                _selectedTool == _BoardTool.rect,
-                                            onTap: () => setState(() {
-                                              _selectedTool = _BoardTool.rect;
-                                            }),
-                                          ),
-                                          _BoardToolButton(
-                                            icon: Icons.circle_outlined,
-                                            label: 'Circle',
-                                            selected: _selectedTool ==
-                                                _BoardTool.circle,
-                                            onTap: () => setState(() {
-                                              _selectedTool = _BoardTool.circle;
-                                            }),
-                                          ),
-                                          _BoardToolButton(
-                                            icon: Icons.text_fields,
-                                            label: 'Text',
-                                            selected:
-                                                _selectedTool == _BoardTool.text,
-                                            onTap: () => setState(() {
-                                              _selectedTool = _BoardTool.text;
-                                            }),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                                  _BoardToolIconButton(
+                                    icon: PhosphorIconsLight.eraser,
+                                    selected: _selectedTool == _BoardTool.eraser,
+                                    onTap: () => setState(() {
+                                      _selectedTool = _BoardTool.eraser;
+                                    }),
                                   ),
-                                ),
-                                Expanded(
-                                  child: LayoutBuilder(
-                                    builder: (context, constraints) {
-                                      final canvasSize = Size(
-                                        constraints.maxWidth,
-                                        constraints.maxHeight,
-                                      );
-
-                                      return GestureDetector(
-                                        onTapDown: (details) {
-                                          if (_selectedTool == _BoardTool.text) {
-                                            _addTextAt(
-                                              details.localPosition,
-                                              canvasSize,
-                                            );
-                                          }
-                                        },
-                                        onPanStart: (details) =>
-                                            _onBoardPanStart(details, canvasSize),
-                                        onPanUpdate: (details) =>
-                                            _onBoardPanUpdate(details, canvasSize),
-                                        onPanEnd: (_) => _onBoardPanEnd(),
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            color: _boardBgColor,
-                                            borderRadius:
-                                                BorderRadius.circular(20),
-                                            border: Border.all(
-                                              color: AppColors.border,
-                                            ),
-                                          ),
-                                          child: Stack(
-                                            children: [
-                                              Positioned.fill(
-                                                child: CustomPaint(
-                                                  painter: _WhiteboardPainter(
-                                                    items: _boardItems,
-                                                  ),
-                                                ),
-                                              ),
-                                              Positioned(
-                                                right: 8,
-                                                top: 8,
-                                                child: Icon(
-                                                  Icons.star_border,
-                                                  color: Colors.amber.shade400,
-                                                  size: 18,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      );
-                                    },
+                                  _BoardToolIconButton(
+                                    icon: PhosphorIconsLight.square,
+                                    selected: _selectedTool == _BoardTool.rect,
+                                    onTap: () => setState(() {
+                                      _selectedTool = _BoardTool.rect;
+                                    }),
                                   ),
-                                ),
-                              ],
+                                  _BoardToolIconButton(
+                                    icon: PhosphorIconsLight.circle,
+                                    selected: _selectedTool == _BoardTool.circle,
+                                    onTap: () => setState(() {
+                                      _selectedTool = _BoardTool.circle;
+                                    }),
+                                  ),
+                                  _BoardToolIconButton(
+                                    icon: PhosphorIconsLight.textT,
+                                    selected: _selectedTool == _BoardTool.text,
+                                    onTap: () => setState(() {
+                                      _selectedTool = _BoardTool.text;
+                                    }),
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  _ColorDot(
+                                    color: Colors.white,
+                                    selected: _selectedColor == Colors.white,
+                                    onTap: () => setState(() {
+                                      _selectedColor = Colors.white;
+                                    }),
+                                  ),
+                                  _ColorDot(
+                                    color: Colors.green.shade500,
+                                    selected:
+                                        _selectedColor == Colors.green.shade500,
+                                    onTap: () => setState(() {
+                                      _selectedColor = Colors.green.shade500;
+                                    }),
+                                  ),
+                                  _ColorDot(
+                                    color: Colors.blue.shade400,
+                                    selected: _selectedColor == Colors.blue.shade400,
+                                    onTap: () => setState(() {
+                                      _selectedColor = Colors.blue.shade400;
+                                    }),
+                                  ),
+                                  _ColorDot(
+                                    color: Colors.purple.shade400,
+                                    selected:
+                                        _selectedColor == Colors.purple.shade400,
+                                    onTap: () => setState(() {
+                                      _selectedColor = Colors.purple.shade400;
+                                    }),
+                                  ),
+                                  _ColorDot(
+                                    color: Colors.orange.shade400,
+                                    selected:
+                                        _selectedColor == Colors.orange.shade400,
+                                    onTap: () => setState(() {
+                                      _selectedColor = Colors.orange.shade400;
+                                    }),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                           const SizedBox(height: AppSpacing.md),
-                          Wrap(
-                            spacing: AppSpacing.sm,
-                            runSpacing: AppSpacing.sm,
-                            children: [
-                              _ColorDot(
-                                color: Colors.white,
-                                selected: _selectedColor == Colors.white,
-                                onTap: () => setState(() {
-                                  _selectedColor = Colors.white;
-                                }),
-                              ),
-                              _ColorDot(
-                                color: Colors.green.shade500,
-                                selected:
-                                    _selectedColor == Colors.green.shade500,
-                                onTap: () => setState(() {
-                                  _selectedColor = Colors.green.shade500;
-                                }),
-                              ),
-                              _ColorDot(
-                                color: Colors.blue.shade400,
-                                selected: _selectedColor == Colors.blue.shade400,
-                                onTap: () => setState(() {
-                                  _selectedColor = Colors.blue.shade400;
-                                }),
-                              ),
-                              _ColorDot(
-                                color: Colors.purple.shade400,
-                                selected:
-                                    _selectedColor == Colors.purple.shade400,
-                                onTap: () => setState(() {
-                                  _selectedColor = Colors.purple.shade400;
-                                }),
-                              ),
-                              _ColorDot(
-                                color: Colors.orange.shade400,
-                                selected:
-                                    _selectedColor == Colors.orange.shade400,
-                                onTap: () => setState(() {
-                                  _selectedColor = Colors.orange.shade400;
-                                }),
-                              ),
-                            ],
+                          SizedBox(
+                            height: 320,
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                final canvasSize = Size(
+                                  constraints.maxWidth,
+                                  constraints.maxHeight,
+                                );
+
+                                return GestureDetector(
+                                  onTapDown: (details) {
+                                    if (_selectedTool == _BoardTool.text) {
+                                      _addTextAt(
+                                        details.localPosition,
+                                        canvasSize,
+                                      );
+                                    }
+                                  },
+                                  onPanStart: (details) =>
+                                      _onBoardPanStart(details, canvasSize),
+                                  onPanUpdate: (details) =>
+                                      _onBoardPanUpdate(details, canvasSize),
+                                  onPanEnd: (_) => _onBoardPanEnd(),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: _boardBgColor,
+                                      borderRadius: BorderRadius.circular(24),
+                                      border: Border.all(
+                                        color: AppColors.border,
+                                      ),
+                                    ),
+                                    child: Stack(
+                                      children: [
+                                        Positioned.fill(
+                                          child: CustomPaint(
+                                            painter: _WhiteboardGridPainter(),
+                                          ),
+                                        ),
+                                        Positioned.fill(
+                                          child: CustomPaint(
+                                            painter: _WhiteboardPainter(
+                                              items: _boardItems,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                         ],
                       ),
@@ -2964,6 +2929,39 @@ class _BoardToolButton extends StatelessWidget {
   }
 }
 
+class _BoardToolIconButton extends StatelessWidget {
+  const _BoardToolIconButton({
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.accentSoft : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(
+          icon,
+          size: 20,
+          color: selected ? AppColors.accent : AppColors.textSecondary,
+        ),
+      ),
+    );
+  }
+}
+
 class _GradientBackground extends StatelessWidget {
   const _GradientBackground({required this.child});
 
@@ -3054,6 +3052,27 @@ class _WhiteboardPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _WhiteboardPainter oldDelegate) {
     return oldDelegate.items != items;
+  }
+}
+
+class _WhiteboardGridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    const double spacing = 18;
+    final paint = Paint()
+      ..color = AppColors.border.withOpacity(0.6)
+      ..strokeWidth = 1;
+
+    for (double y = 0; y <= size.height; y += spacing) {
+      for (double x = 0; x <= size.width; x += spacing) {
+        canvas.drawCircle(Offset(x, y), 0.8, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _WhiteboardGridPainter oldDelegate) {
+    return false;
   }
 }
 
