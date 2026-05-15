@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'theme/app_theme.dart';
+import 'theme/colors.dart';
+import 'theme/spacing.dart';
 
 void main() {
   runApp(const ChatApp());
@@ -18,7 +20,7 @@ const Color _panelBorder = Color(0xFF2D355F);
 const Color _primaryPurple = Color(0xFF6C5CF6);
 const Color _textPrimary = Color(0xFFEAF0FF);
 const Color _textMuted = Color(0xFF98A2C7);
-const Color _boardBgColor = Color(0xFF0F152A);
+const Color _boardBgColor = Color(0xFFFFFEFD);
 
 class ChatApp extends StatelessWidget {
   const ChatApp({super.key});
@@ -2011,22 +2013,22 @@ class _RoomScreenState extends State<RoomScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isInCall) {
+      final textTheme = Theme.of(context).textTheme;
       return Scaffold(
         appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          foregroundColor: _textPrimary,
           titleSpacing: 0,
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 _isVideoMode ? 'Study Group Video' : 'Study Group Voice',
-                style: const TextStyle(fontSize: 16, color: _textPrimary),
+                style: textTheme.titleMedium,
               ),
               Text(
                 '${_peers.length + 1} members${_presentationMode ? ' • Presentation' : ''}',
-                style: const TextStyle(fontSize: 12, color: _textMuted),
+                style: textTheme.labelMedium?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
               ),
             ],
           ),
@@ -2036,7 +2038,7 @@ class _RoomScreenState extends State<RoomScreen> {
                 onPressed: _openHostControlsSheet,
                 icon: const Icon(Icons.admin_panel_settings_outlined),
               ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
           ],
         ),
         body: _GradientBackground(
@@ -2049,24 +2051,16 @@ class _RoomScreenState extends State<RoomScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        foregroundColor: _textPrimary,
         titleSpacing: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Room ${widget.roomId}',
-              style: const TextStyle(
-                color: _textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            Text('Room ${widget.roomId}'),
             Text(
               widget.nickname,
-              style: const TextStyle(color: _textMuted, fontSize: 12),
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: AppColors.textSecondary,
+              ),
             ),
           ],
         ),
@@ -2102,12 +2096,17 @@ class _RoomScreenState extends State<RoomScreen> {
                 : _joinVoiceCall,
             icon: Icon(_isInCall ? Icons.call_end : Icons.call),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
         ],
       ),
       body: _GradientBackground(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.sm,
+            AppSpacing.lg,
+            AppSpacing.lg,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -2117,35 +2116,37 @@ class _RoomScreenState extends State<RoomScreen> {
                   children: [
                     if (_presentationMode)
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                         child: Text(
                           _isHost
                               ? 'Presentation mode is ON (only host speaks)'
                               : 'Presentation mode is ON (host only speaks)',
-                          style: const TextStyle(color: _textMuted),
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ),
                     if (_isMutedByHost)
                       const Padding(
-                        padding: EdgeInsets.only(bottom: 8),
+                        padding: EdgeInsets.only(bottom: AppSpacing.sm),
                         child: Text(
                           'You are muted by host',
-                          style: TextStyle(color: Colors.orangeAccent),
+                          style: TextStyle(color: AppColors.danger),
                         ),
                       ),
                     const Text(
                       'Share room link',
-                      style: TextStyle(color: _textMuted),
+                      style: TextStyle(color: AppColors.textSecondary),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppSpacing.xs),
                     SelectableText(
                       widget.roomLink,
-                      style: const TextStyle(color: _textMuted),
+                      style: const TextStyle(color: AppColors.textSecondary),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: AppSpacing.md),
                     Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
                       children: [
                         OutlinedButton.icon(
                           onPressed: _isInCall ? null : _joinVoiceCall,
@@ -2202,10 +2203,10 @@ class _RoomScreenState extends State<RoomScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: AppSpacing.md),
               if (_isInCall && _isVideoMode) ...[
                 _buildVideoGrid(),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppSpacing.md),
               ],
               _Panel(
                 child: Column(
@@ -2228,19 +2229,21 @@ class _RoomScreenState extends State<RoomScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                     SizedBox(
                       height: 210,
                       child: Row(
                         children: [
                           Container(
                             width: 52,
-                            margin: const EdgeInsets.only(right: 8),
-                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            margin: const EdgeInsets.only(right: AppSpacing.sm),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: AppSpacing.xs,
+                            ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF111A34),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: _panelBorder),
+                              color: AppColors.card,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppColors.border),
                             ),
                             child: Scrollbar(
                               thumbVisibility: true,
@@ -2335,8 +2338,8 @@ class _RoomScreenState extends State<RoomScreen> {
                                   child: Container(
                                     decoration: BoxDecoration(
                                       color: _boardBgColor,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(color: _panelBorder),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: AppColors.border),
                                     ),
                                     child: Stack(
                                       children: [
@@ -2366,10 +2369,10 @@ class _RoomScreenState extends State<RoomScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: AppSpacing.md),
                     Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
                       children: [
                         _ColorDot(
                           color: Colors.white,
@@ -2616,24 +2619,28 @@ class _ModeChip extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
         decoration: BoxDecoration(
-          color: highlighted
-              ? const Color(0xFF2D3A74)
-              : const Color(0xFF121A33),
+          color: highlighted ? AppColors.accentSoft : AppColors.card,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: highlighted ? _primaryPurple : _panelBorder,
+            color: highlighted ? AppColors.accent : AppColors.border,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: Colors.white),
+            Icon(icon, size: 14, color: AppColors.textPrimary),
             const SizedBox(width: 6),
             Text(
               label,
-              style: const TextStyle(color: Colors.white, fontSize: 12),
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 12,
+              ),
             ),
           ],
         ),
@@ -2665,7 +2672,7 @@ class _ColorDot extends StatelessWidget {
           color: color,
           shape: BoxShape.circle,
           border: Border.all(
-            color: selected ? Colors.white : Colors.transparent,
+            color: selected ? AppColors.accent : AppColors.border,
             width: 2,
           ),
         ),
@@ -2689,14 +2696,17 @@ class _BoardToolButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? _primaryPurple : _textMuted;
+    final color = selected ? AppColors.accent : AppColors.textSecondary;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xs,
+          vertical: 6,
+        ),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF1A2344) : Colors.transparent,
+          color: selected ? AppColors.accentSoft : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -2722,13 +2732,7 @@ class _GradientBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [_bgTop, _bgBottom],
-        ),
-      ),
+      color: AppColors.background,
       child: child,
     );
   }
@@ -2742,11 +2746,12 @@ class _Panel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: _panelColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _panelBorder),
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+        boxShadow: AppTheme.softShadow,
       ),
       child: child,
     );
