@@ -1782,12 +1782,21 @@ class _RoomScreenState extends State<RoomScreen> {
           ),
         ),
         Container(
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          margin: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            0,
+            AppSpacing.lg,
+            AppSpacing.lg,
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.sm,
+          ),
           decoration: BoxDecoration(
-            color: const Color(0xFF121A33),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: _panelBorder),
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.border),
+            boxShadow: AppTheme.softShadow,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1960,12 +1969,21 @@ class _RoomScreenState extends State<RoomScreen> {
           ),
         ),
         Container(
-          margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          margin: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            0,
+            AppSpacing.lg,
+            AppSpacing.lg,
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.sm,
+          ),
           decoration: BoxDecoration(
-            color: const Color(0xFF121A33),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: _panelBorder),
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.border),
+            boxShadow: AppTheme.softShadow,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -2820,9 +2838,17 @@ class _CallCircleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color bgColor = const Color(0xFF1B2647);
-    if (isPrimary) bgColor = _primaryPurple;
-    if (isDanger) bgColor = const Color(0xFFE84A4A);
+    Color bgColor = AppColors.card;
+    Color iconColor = AppColors.textPrimary;
+
+    if (isPrimary) {
+      bgColor = AppColors.accentSoft;
+      iconColor = AppColors.accent;
+    }
+    if (isDanger) {
+      bgColor = AppColors.danger;
+      iconColor = Colors.white;
+    }
 
     return InkWell(
       onTap: onTap,
@@ -2830,8 +2856,13 @@ class _CallCircleButton extends StatelessWidget {
       child: Container(
         width: 42,
         height: 42,
-        decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
-        child: Icon(icon, color: Colors.white, size: 20),
+        decoration: BoxDecoration(
+          color: bgColor,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.border),
+          boxShadow: AppTheme.softShadow,
+        ),
+        child: Icon(icon, color: iconColor, size: 20),
       ),
     );
   }
