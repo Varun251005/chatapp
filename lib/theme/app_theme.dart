@@ -21,7 +21,7 @@ class AppTheme {
         error: AppColors.danger,
       ),
       dividerColor: AppColors.border,
-      cardTheme: CardTheme(
+      cardTheme: const CardThemeData(
         color: AppColors.card,
         elevation: 0,
         shape: RoundedRectangleBorder(
