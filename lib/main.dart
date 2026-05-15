@@ -2217,7 +2217,30 @@ class _RoomScreenState extends State<RoomScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Chat', style: Theme.of(context).textTheme.titleMedium),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Chat', style: Theme.of(context).textTheme.titleMedium),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.accentSoft,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'Live',
+                  style: TextStyle(
+                    color: AppColors.accent,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: AppSpacing.md),
           Expanded(
             child: _messages.isEmpty
@@ -2238,6 +2261,7 @@ class _RoomScreenState extends State<RoomScreen> {
                           alignment: Alignment.centerRight,
                           child: Container(
                             margin: const EdgeInsets.symmetric(vertical: 6),
+                            constraints: const BoxConstraints(maxWidth: 240),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 12,
                               vertical: 10,
@@ -2248,7 +2272,10 @@ class _RoomScreenState extends State<RoomScreen> {
                             ),
                             child: Text(
                               item['message'] ?? '',
-                              style: const TextStyle(color: Colors.white),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                         );
@@ -2276,6 +2303,7 @@ class _RoomScreenState extends State<RoomScreen> {
                             const SizedBox(width: AppSpacing.sm),
                             Flexible(
                               child: Container(
+                                constraints: const BoxConstraints(maxWidth: 240),
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
                                   vertical: 10,
@@ -2343,15 +2371,19 @@ class _RoomScreenState extends State<RoomScreen> {
                     onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
-                IconButton(
-                  onPressed: _isInCall ? _toggleMute : _joinVoiceCall,
-                  icon: Icon(_isInCall ? Icons.mic : Icons.mic_none),
-                  color: AppColors.accent,
-                ),
-                IconButton(
-                  onPressed: _sendMessage,
-                  icon: const Icon(Icons.send_rounded),
-                  color: AppColors.accent,
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: _sendMessage,
+                    icon: const Icon(Icons.send_rounded, size: 18),
+                    color: Colors.white,
+                  ),
                 ),
               ],
             ),
