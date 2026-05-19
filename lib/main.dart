@@ -2292,10 +2292,10 @@ class _RoomScreenState extends State<RoomScreen> {
 
   Widget _buildChatPanel(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppColors.border),
         boxShadow: AppTheme.softShadow,
       ),
@@ -2826,7 +2826,7 @@ class _RoomScreenState extends State<RoomScreen> {
 
     return Container(
       width: 240,
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(24),
@@ -3033,7 +3033,7 @@ class _RoomScreenState extends State<RoomScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(width: 220, child: _buildSidebar(context)),
+                    SizedBox(width: 240, child: _buildSidebar(context)),
                     const SizedBox(width: AppSpacing.lg),
                     Expanded(
                       child: SingleChildScrollView(
