@@ -2585,7 +2585,7 @@ class _RoomScreenState extends State<RoomScreen> {
                   ),
                   _PillActionButton(
                     label: 'Leave',
-                    icon: PhosphorIconsLight.phoneX,
+                    icon: PhosphorIconsLight.phoneDisconnect,
                     onPressed:
                         _isInCall ? () => _leaveVoiceCall(notifyOthers: true) : null,
                   ),
@@ -2607,7 +2607,7 @@ class _RoomScreenState extends State<RoomScreen> {
                   _PillActionButton(
                     label: _isScreenSharing ? 'Stop Share' : 'Start Share',
                     icon: _isScreenSharing
-                        ? PhosphorIconsLight.monitorX
+                      ? PhosphorIconsLight.screencast
                         : PhosphorIconsLight.monitorArrowUp,
                     onPressed: _isInCall && _isVideoMode
                         ? (_isScreenSharing ? _stopScreenShare : _startScreenShare)
