@@ -1734,7 +1734,12 @@ class _RoomScreenState extends State<RoomScreen> {
         _buildVideoTile(
           label: 'You',
           child: _localRenderer.srcObject == null
-              ? const Center(child: Icon(Icons.videocam_off, color: _textMuted))
+              ? const Center(
+                  child: Icon(
+                    PhosphorIconsLight.videoCameraSlash,
+                    color: _textMuted,
+                  ),
+                )
               : RTCVideoView(
                   _localRenderer,
                   mirror: true,
@@ -1750,7 +1755,12 @@ class _RoomScreenState extends State<RoomScreen> {
         _buildVideoTile(
           label: entry.key,
           child: renderer.srcObject == null
-              ? const Center(child: Icon(Icons.person, color: _textMuted))
+              ? const Center(
+                  child: Icon(
+                    PhosphorIconsLight.user,
+                    color: _textMuted,
+                  ),
+                )
               : RTCVideoView(
                   renderer,
                   objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
@@ -1812,14 +1822,16 @@ class _RoomScreenState extends State<RoomScreen> {
                 label: _lowBandwidthMode ? 'Low Bandwidth ON' : 'Low Bandwidth',
                 onTap: _toggleLowBandwidthMode,
                 highlighted: _lowBandwidthMode,
-                icon: Icons.network_check,
+                icon: PhosphorIconsLight.wifiLow,
               ),
               const SizedBox(width: 8),
               _ModeChip(
                 label: _isVideoMode ? 'Audio Only' : 'Video Mode',
                 onTap: _switchAudioVideoMode,
                 highlighted: !_isVideoMode,
-                icon: _isVideoMode ? Icons.voicemail : Icons.video_call,
+                icon: _isVideoMode
+                    ? PhosphorIconsLight.waveform
+                    : PhosphorIconsLight.videoCamera,
               ),
             ],
           ),
@@ -1898,16 +1910,20 @@ class _RoomScreenState extends State<RoomScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _CallCircleButton(
-                icon: _isMuted ? Icons.mic_off : Icons.mic,
+                icon: _isMuted
+                    ? PhosphorIconsLight.microphoneSlash
+                    : PhosphorIconsLight.microphone,
                 onTap: _toggleMute,
               ),
               _CallCircleButton(
-                icon: _isVideoMode ? Icons.voicemail : Icons.video_call,
+                icon: _isVideoMode
+                    ? PhosphorIconsLight.waveform
+                    : PhosphorIconsLight.videoCamera,
                 onTap: _switchAudioVideoMode,
                 isPrimary: true,
               ),
               _CallCircleButton(
-                icon: Icons.call_end,
+                icon: PhosphorIconsLight.phoneDisconnect,
                 onTap: () => _leaveVoiceCall(notifyOthers: true),
                 isDanger: true,
               ),
@@ -1944,7 +1960,11 @@ class _RoomScreenState extends State<RoomScreen> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.cast_connected, color: _textPrimary, size: 16),
+                const Icon(
+                  PhosphorIconsLight.screencast,
+                  color: _textPrimary,
+                  size: 16,
+                ),
                 const SizedBox(width: 8),
                 const Expanded(
                   child: Text(
@@ -1981,14 +2001,16 @@ class _RoomScreenState extends State<RoomScreen> {
                 label: _lowBandwidthMode ? 'Low Bandwidth ON' : 'Low Bandwidth',
                 onTap: _toggleLowBandwidthMode,
                 highlighted: _lowBandwidthMode,
-                icon: Icons.network_check,
+                icon: PhosphorIconsLight.wifiLow,
               ),
               const SizedBox(width: 8),
               _ModeChip(
                 label: _isVideoMode ? 'Audio Only' : 'Video Mode',
                 onTap: _switchAudioVideoMode,
                 highlighted: !_isVideoMode,
-                icon: _isVideoMode ? Icons.voicemail : Icons.video_call,
+                icon: _isVideoMode
+                    ? PhosphorIconsLight.waveform
+                    : PhosphorIconsLight.videoCamera,
               ),
             ],
           ),
@@ -2020,7 +2042,7 @@ class _RoomScreenState extends State<RoomScreen> {
                               color: const Color(0xFF0F152A),
                               alignment: Alignment.center,
                               child: const Icon(
-                                Icons.videocam_off,
+                                PhosphorIconsLight.videoCameraSlash,
                                 color: _textMuted,
                               ),
                             )
@@ -2053,7 +2075,9 @@ class _RoomScreenState extends State<RoomScreen> {
                       right: 6,
                       top: 6,
                       child: Icon(
-                        _isMuted && isLocal ? Icons.mic_off : Icons.mic_none,
+                        _isMuted && isLocal
+                            ? PhosphorIconsLight.microphoneSlash
+                            : PhosphorIconsLight.microphone,
                         color: Colors.white,
                         size: 16,
                       ),
@@ -2085,26 +2109,32 @@ class _RoomScreenState extends State<RoomScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _CallCircleButton(
-                icon: _isCameraOn ? Icons.videocam : Icons.videocam_off,
+                icon: _isCameraOn
+                    ? PhosphorIconsLight.videoCamera
+                    : PhosphorIconsLight.videoCameraSlash,
                 onTap: _toggleCamera,
               ),
               _CallCircleButton(
-                icon: _isMuted ? Icons.mic_off : Icons.mic,
+                icon: _isMuted
+                    ? PhosphorIconsLight.microphoneSlash
+                    : PhosphorIconsLight.microphone,
                 onTap: _toggleMute,
               ),
               _CallCircleButton(
-                icon: Icons.call_end,
+                icon: PhosphorIconsLight.phoneDisconnect,
                 onTap: () => _leaveVoiceCall(notifyOthers: true),
                 isDanger: true,
               ),
               _CallCircleButton(
                 icon: _isScreenSharing
-                    ? Icons.stop_screen_share
-                    : Icons.screen_share,
+                    ? PhosphorIconsLight.screencast
+                    : PhosphorIconsLight.monitorArrowUp,
                 onTap: _isScreenSharing ? _stopScreenShare : _startScreenShare,
               ),
               _CallCircleButton(
-                icon: _isVideoMode ? Icons.voicemail : Icons.video_call,
+                icon: _isVideoMode
+                    ? PhosphorIconsLight.waveform
+                    : PhosphorIconsLight.videoCamera,
                 onTap: _switchAudioVideoMode,
               ),
             ],
@@ -2909,7 +2939,7 @@ class _RoomScreenState extends State<RoomScreen> {
             if (_isHost)
               IconButton(
                 onPressed: _openHostControlsSheet,
-                icon: const Icon(Icons.admin_panel_settings_outlined),
+                icon: const Icon(PhosphorIconsLight.crown),
               ),
             const SizedBox(width: AppSpacing.sm),
           ],
