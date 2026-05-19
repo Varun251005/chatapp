@@ -576,8 +576,19 @@ class _RoomScreenState extends State<RoomScreen> {
   bool _presentationMode = false;
   int _mobileTabIndex = 0;
   bool _showChatPanel = true;
+  bool _showParticipantsPanel = false;
+  bool _showSettingsPanel = false;
+  bool _sidebarExpanded = false;
 
   static const int _maxUsersInCall = 6;
+
+  void _closeOverlays() {
+    setState(() {
+      _showChatPanel = false;
+      _showParticipantsPanel = false;
+      _showSettingsPanel = false;
+    });
+  }
 
   @override
   void initState() {
@@ -2983,34 +2994,140 @@ class _RoomScreenState extends State<RoomScreen> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
+            final isMobile = width < 700;
+            final isTablet = width >= 700 && width < 1200;
 
-            if (width < 720) {
+            if (isMobile) {
               return Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   children: [
-                    Expanded(
-                      child: IndexedStack(
-                        index: _mobileTabIndex,
-                        children: [
-                          SingleChildScrollView(child: _buildCenterContent()),
-                          _buildChatPanel(context),
-                          _buildSidebar(context),
-                        ],
-                      ),
-                    ),
+                    Expanded(child: SingleChildScrollView(child: _buildCenterContent())),
                     const SizedBox(height: AppSpacing.sm),
                     NavigationBar(
                       selectedIndex: _mobileTabIndex,
-                      onDestinationSelected: (index) {
+                      onDestinationSelected: (index) async {
                         setState(() {
                           _mobileTabIndex = index;
                         });
+
+                        if (index == 1) {
+                          await showModalBottomSheet<void>(
+                            context: context,
+                            useSafeArea: true,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (context) {
+                              return FractionallySizedBox(
+                                heightFactor: 0.95,
+                                child: Container(
+                                  padding: const EdgeInsets.all(AppSpacing.md),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.background,
+                                    borderRadius: BorderRadius.circular(24),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(
+                                            'Chat',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleMedium,
+                                          ),
+                                          const Spacer(),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: AppSpacing.sm,
+                                              vertical: AppSpacing.xs,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.accentSoft,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: const Text(
+                                              'Live',
+                                              style: TextStyle(
+                                                color: AppColors.accent,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: AppSpacing.sm),
+                                          IconButton(
+                                            onPressed: () =>
+                                                Navigator.of(context).pop(),
+                                            icon: const Icon(
+                                              PhosphorIconsLight.x,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: AppSpacing.md),
+                                      Expanded(child: _buildChatPanel(context)),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                          if (mounted) {
+                            setState(() {
+                              _mobileTabIndex = 0;
+                            });
+                          }
+                          return;
+                        }
+
+                        if (index == 2) {
+                          await showModalBottomSheet<void>(
+                            context: context,
+                            useSafeArea: true,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (context) {
+                              return FractionallySizedBox(
+                                heightFactor: 0.65,
+                                child: _buildParticipantsPanel(context),
+                              );
+                            },
+                          );
+                          if (mounted) {
+                            setState(() {
+                              _mobileTabIndex = 0;
+                            });
+                          }
+                          return;
+                        }
+
+                        if (index == 3) {
+                          await showModalBottomSheet<void>(
+                            context: context,
+                            useSafeArea: true,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (context) {
+                              return FractionallySizedBox(
+                                heightFactor: 0.65,
+                                child: _buildSettingsPanel(context),
+                              );
+                            },
+                          );
+                          if (mounted) {
+                            setState(() {
+                              _mobileTabIndex = 0;
+                            });
+                          }
+                          return;
+                        }
                       },
                       destinations: const [
                         NavigationDestination(
                           icon: Icon(PhosphorIconsLight.penNib),
-                          label: 'Board',
+                          label: 'Whiteboard',
                         ),
                         NavigationDestination(
                           icon: Icon(PhosphorIconsLight.chatDots),
@@ -3018,7 +3135,11 @@ class _RoomScreenState extends State<RoomScreen> {
                         ),
                         NavigationDestination(
                           icon: Icon(PhosphorIconsLight.users),
-                          label: 'People',
+                          label: 'Participants',
+                        ),
+                        NavigationDestination(
+                          icon: Icon(PhosphorIconsLight.gear),
+                          label: 'Settings',
                         ),
                       ],
                     ),
@@ -3027,42 +3148,513 @@ class _RoomScreenState extends State<RoomScreen> {
               );
             }
 
-            if (width < 1100) {
-              return Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(width: 240, child: _buildSidebar(context)),
-                    const SizedBox(width: AppSpacing.lg),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: _buildCenterContent(),
-                      ),
-                    ),
-                    if (_showChatPanel) ...[
-                      const SizedBox(width: AppSpacing.lg),
-                      SizedBox(width: 320, child: _buildChatPanel(context)),
-                    ],
-                  ],
-                ),
-              );
-            }
+            final sidebarWidth = _sidebarExpanded ? 240.0 : 72.0;
+            final chatWidth = 320.0;
+            final panelTopPadding = AppSpacing.md;
+            final panelRightPadding = AppSpacing.md;
+            final panelBottomPadding = AppSpacing.md;
+
+            final showScrim = isTablet && (_showChatPanel || _showParticipantsPanel || _showSettingsPanel);
+            final isChatDocked = !isTablet;
+            final dockedRightInset = (_showChatPanel && isChatDocked) ? (chatWidth + AppSpacing.lg) : 0.0;
 
             return Padding(
               padding: const EdgeInsets.all(AppSpacing.md),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Stack(
                 children: [
-                  _buildSidebar(context),
-                  const SizedBox(width: AppSpacing.lg),
-                  Expanded(child: _buildCenterContent()),
-                  const SizedBox(width: AppSpacing.lg),
-                  SizedBox(width: 320, child: _buildChatPanel(context)),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      MouseRegion(
+                        onEnter: (_) {
+                          if (!isTablet) {
+                            setState(() {
+                              _sidebarExpanded = true;
+                            });
+                          }
+                        },
+                        onExit: (_) {
+                          if (!isTablet) {
+                            setState(() {
+                              _sidebarExpanded = false;
+                            });
+                          }
+                        },
+                        child: SizedBox(
+                          width: sidebarWidth,
+                          child: _MiniSidebar(
+                            expanded: _sidebarExpanded || isTablet,
+                            active: _MiniSidebarSection.whiteboard,
+                            onWhiteboard: () {
+                              _closeOverlays();
+                            },
+                            onChat: () {
+                              setState(() {
+                                _showChatPanel = !_showChatPanel;
+                                _showParticipantsPanel = false;
+                                _showSettingsPanel = false;
+                              });
+                            },
+                            onParticipants: () {
+                              setState(() {
+                                _showParticipantsPanel = !_showParticipantsPanel;
+                                _showChatPanel = false;
+                                _showSettingsPanel = false;
+                              });
+                            },
+                            onSettings: () {
+                              setState(() {
+                                _showSettingsPanel = !_showSettingsPanel;
+                                _showChatPanel = false;
+                                _showParticipantsPanel = false;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.lg),
+                      Expanded(
+                        child: AnimatedPadding(
+                          duration: const Duration(milliseconds: 220),
+                          curve: Curves.easeOut,
+                          padding: EdgeInsets.only(right: dockedRightInset),
+                          child: SingleChildScrollView(child: _buildCenterContent()),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (showScrim)
+                    Positioned.fill(
+                      child: GestureDetector(
+                        onTap: _closeOverlays,
+                        child: Container(
+                          color: Colors.black.withOpacity(0.08),
+                        ),
+                      ),
+                    ),
+                  _SlidePanel(
+                    visible: _showChatPanel,
+                    width: chatWidth,
+                    top: panelTopPadding,
+                    right: panelRightPadding,
+                    bottom: panelBottomPadding,
+                    docked: isChatDocked,
+                    child: _buildChatPanel(context),
+                  ),
+                  _SlidePanel(
+                    visible: _showParticipantsPanel,
+                    width: chatWidth,
+                    top: panelTopPadding,
+                    right: panelRightPadding,
+                    bottom: panelBottomPadding,
+                    docked: false,
+                    child: _buildParticipantsPanel(context),
+                  ),
+                  _SlidePanel(
+                    visible: _showSettingsPanel,
+                    width: chatWidth,
+                    top: panelTopPadding,
+                    right: panelRightPadding,
+                    bottom: panelBottomPadding,
+                    docked: false,
+                    child: _buildSettingsPanel(context),
+                  ),
                 ],
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildParticipantsPanel(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final participants = _participants;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border),
+        boxShadow: AppTheme.softShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('Participants', style: textTheme.titleMedium),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.accentSoft,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${participants.length}',
+                  style: const TextStyle(
+                    color: AppColors.accent,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              IconButton(
+                onPressed: () {
+                  if (MediaQuery.of(context).size.width >= 700) {
+                    setState(() {
+                      _showParticipantsPanel = false;
+                    });
+                  } else {
+                    Navigator.of(context).pop();
+                  }
+                },
+                icon: const Icon(PhosphorIconsLight.x),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Expanded(
+            child: ListView.separated(
+              itemCount: participants.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final participant = participants[index];
+                final nickname = participant['nickname']?.toString() ?? 'Guest';
+                final isHost = participant['is_host'] == true;
+                final initials = nickname.isNotEmpty
+                    ? nickname.characters.first.toUpperCase()
+                    : '?';
+
+                return Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: AppColors.accentSoft,
+                      child: Text(
+                        initials,
+                        style: textTheme.labelMedium?.copyWith(
+                          color: AppColors.accent,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        nickname,
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    if (isHost)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.accentSoft,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: const Text(
+                          'Host',
+                          style: TextStyle(
+                            color: AppColors.accent,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          SizedBox(
+            height: 48,
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {},
+              icon: const Icon(PhosphorIconsLight.userPlus, size: 18),
+              label: const Text('Invite Participants'),
+              style: OutlinedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsPanel(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    Widget item({required IconData icon, required String label, bool danger = false}) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: danger ? AppColors.danger : AppColors.textSecondary),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                label,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: danger ? AppColors.danger : AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border),
+        boxShadow: AppTheme.softShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('Settings', style: textTheme.titleMedium),
+              const Spacer(),
+              IconButton(
+                onPressed: () {
+                  if (MediaQuery.of(context).size.width >= 700) {
+                    setState(() {
+                      _showSettingsPanel = false;
+                    });
+                  } else {
+                    Navigator.of(context).pop();
+                  }
+                },
+                icon: const Icon(PhosphorIconsLight.x),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          item(icon: PhosphorIconsLight.info, label: 'Room Info'),
+          const SizedBox(height: 12),
+          item(icon: PhosphorIconsLight.lockKey, label: 'Permissions'),
+          const SizedBox(height: 12),
+          item(icon: PhosphorIconsLight.paintBrush, label: 'Background'),
+          const SizedBox(height: 12),
+          item(icon: PhosphorIconsLight.keyboard, label: 'Shortcuts'),
+          const SizedBox(height: 12),
+          item(icon: PhosphorIconsLight.question, label: 'Help & Support'),
+          const Spacer(),
+          item(icon: PhosphorIconsLight.signOut, label: 'Leave Room', danger: true),
+        ],
+      ),
+    );
+  }
+}
+
+enum _MiniSidebarSection { whiteboard, chat, participants, settings }
+
+class _MiniSidebar extends StatelessWidget {
+  const _MiniSidebar({
+    required this.expanded,
+    required this.active,
+    required this.onWhiteboard,
+    required this.onChat,
+    required this.onParticipants,
+    required this.onSettings,
+  });
+
+  final bool expanded;
+  final _MiniSidebarSection active;
+  final VoidCallback onWhiteboard;
+  final VoidCallback onChat;
+  final VoidCallback onParticipants;
+  final VoidCallback onSettings;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border),
+        boxShadow: AppTheme.softShadow,
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.accentSoft,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              PhosphorIconsLight.hexagon,
+              color: AppColors.accent,
+              size: 20,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          _MiniSidebarItem(
+            icon: PhosphorIconsLight.penNib,
+            label: 'Whiteboard',
+            expanded: expanded,
+            active: active == _MiniSidebarSection.whiteboard,
+            onTap: onWhiteboard,
+          ),
+          _MiniSidebarItem(
+            icon: PhosphorIconsLight.chatDots,
+            label: 'Chat',
+            expanded: expanded,
+            active: active == _MiniSidebarSection.chat,
+            onTap: onChat,
+          ),
+          _MiniSidebarItem(
+            icon: PhosphorIconsLight.users,
+            label: 'Participants',
+            expanded: expanded,
+            active: active == _MiniSidebarSection.participants,
+            onTap: onParticipants,
+          ),
+          _MiniSidebarItem(
+            icon: PhosphorIconsLight.gear,
+            label: 'Settings',
+            expanded: expanded,
+            active: active == _MiniSidebarSection.settings,
+            onTap: onSettings,
+          ),
+          const Spacer(),
+          if (expanded)
+            Text(
+              'Workspace',
+              style: textTheme.labelMedium?.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniSidebarItem extends StatelessWidget {
+  const _MiniSidebarItem({
+    required this.icon,
+    required this.label,
+    required this.expanded,
+    required this.active,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool expanded;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = active ? AppColors.accent : AppColors.textSecondary;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: active ? AppColors.accentSoft : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: color),
+            if (expanded) ...[
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: active ? AppColors.textPrimary : AppColors.textSecondary,
+                    fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SlidePanel extends StatelessWidget {
+  const _SlidePanel({
+    required this.visible,
+    required this.width,
+    required this.top,
+    required this.right,
+    required this.bottom,
+    required this.child,
+    required this.docked,
+  });
+
+  final bool visible;
+  final double width;
+  final double top;
+  final double right;
+  final double bottom;
+  final Widget child;
+  final bool docked;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedPositioned(
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOut,
+      top: top,
+      bottom: bottom,
+      width: width,
+      right: visible ? right : -(width + 24),
+      child: IgnorePointer(
+        ignoring: !visible,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 160),
+          opacity: visible ? 1 : 0,
+          child: child,
         ),
       ),
     );
