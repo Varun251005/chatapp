@@ -2162,115 +2162,128 @@ class _RoomScreenState extends State<RoomScreen> {
     VoidCallback? onToggleChat,
   }) {
     final textTheme = Theme.of(context).textTheme;
+    final topInset = MediaQuery.of(context).padding.top;
     final displayParticipants = _participants.take(4).toList();
 
     return PreferredSize(
-      preferredSize: const Size.fromHeight(80),
-      child: SafeArea(
-        bottom: false,
-        child: Container(
+      preferredSize: Size.fromHeight(topInset + 80 + (AppSpacing.sm * 2)),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          topInset + AppSpacing.sm,
+          AppSpacing.md,
+          AppSpacing.sm,
+        ),
+        child: SizedBox(
           height: 80,
-          margin: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            AppSpacing.sm,
-            AppSpacing.md,
-            AppSpacing.sm,
-          ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xl,
-            vertical: AppSpacing.sm,
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.card,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppColors.border),
-            boxShadow: AppTheme.softShadow,
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.accentSoft,
-                  borderRadius: BorderRadius.circular(14),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xl,
+              vertical: AppSpacing.sm,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.border),
+              boxShadow: AppTheme.softShadow,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.accentSoft,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    PhosphorIconsLight.square,
+                    color: AppColors.accent,
+                    size: 20,
+                  ),
                 ),
-                child: const Icon(
-                  PhosphorIconsLight.square,
-                  color: AppColors.accent,
-                  size: 20,
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Room ${widget.roomId}',
+                        style: textTheme.displaySmall?.copyWith(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
+                          height: 1.05,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.roomLink,
+                        style: textTheme.labelMedium?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Room ${widget.roomId}',
-                      style: textTheme.displaySmall?.copyWith(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w700,
-                      ),
+                if (showChatToggle)
+                  IconButton(
+                    onPressed: onToggleChat,
+                    icon: Icon(
+                      PhosphorIconsLight.chatDots,
+                      color: chatVisible
+                          ? AppColors.accent
+                          : AppColors.textSecondary,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.roomLink,
-                      style: textTheme.labelMedium?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Row(
-                children: [
-                  if (showChatToggle)
-                    IconButton(
-                      onPressed: onToggleChat,
-                      icon: Icon(
-                        chatVisible
-                            ? PhosphorIconsLight.chatDots
-                            : PhosphorIconsLight.chatDots,
-                        color: chatVisible
-                            ? AppColors.accent
-                            : AppColors.textSecondary,
-                      ),
-                    ),
-                  ...displayParticipants.map((participant) {
-                    final nickname = participant['nickname']?.toString() ?? '';
-                    final initials = nickname.isNotEmpty
-                        ? nickname.characters.first.toUpperCase()
-                        : '?';
-                    return Container(
-                      margin: const EdgeInsets.only(left: 6),
-                      child: CircleAvatar(
-                        radius: 16,
-                        backgroundColor: AppColors.accentSoft,
-                        child: Text(
-                          initials,
-                          style: textTheme.labelMedium?.copyWith(
-                            color: AppColors.accent,
-                          ),
+                  ),
+                ...displayParticipants.map((participant) {
+                  final nickname = participant['nickname']?.toString() ?? '';
+                  final initials = nickname.isNotEmpty
+                      ? nickname.characters.first.toUpperCase()
+                      : '?';
+                  return Container(
+                    margin: const EdgeInsets.only(left: 6),
+                    child: CircleAvatar(
+                      radius: 16,
+                      backgroundColor: AppColors.accentSoft,
+                      child: Text(
+                        initials,
+                        style: textTheme.labelMedium?.copyWith(
+                          color: AppColors.accent,
                         ),
                       ),
-                    );
-                  }),
-                  const SizedBox(width: AppSpacing.md),
-                  ElevatedButton.icon(
+                    ),
+                  );
+                }),
+                const SizedBox(width: AppSpacing.md),
+                SizedBox(
+                  height: 36,
+                  child: ElevatedButton.icon(
                     onPressed: () {},
-                    icon: const Icon(PhosphorIconsLight.userPlus, size: 16),
+                    icon: const Icon(
+                      PhosphorIconsLight.userPlus,
+                      size: 16,
+                    ),
                     label: const Text('Invite'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(PhosphorIconsLight.dotsThree),
-                  ),
-                ],
-              ),
-            ],
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                IconButton(
+                  onPressed: () {},
+                  icon: const Icon(PhosphorIconsLight.dotsThree),
+                ),
+              ],
+            ),
           ),
         ),
       ),
