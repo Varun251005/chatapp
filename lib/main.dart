@@ -1824,122 +1824,110 @@ class _RoomScreenState extends State<RoomScreen> {
   Widget _buildVoiceCallScreen() {
     final participants = _callParticipantNames();
 
-    return Column(
+    return Stack(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: Row(
-            children: [
-              _ModeChip(
-                label: _lowBandwidthMode ? 'Low Bandwidth ON' : 'Low Bandwidth',
-                onTap: _toggleLowBandwidthMode,
-                highlighted: _lowBandwidthMode,
-                icon: PhosphorIconsLight.wifiLow,
-              ),
-              const SizedBox(width: 8),
-              _ModeChip(
-                label: _isVideoMode ? 'Audio Only' : 'Video Mode',
-                onTap: _switchAudioVideoMode,
-                highlighted: !_isVideoMode,
-                icon: _isVideoMode
-                    ? PhosphorIconsLight.waveform
-                    : PhosphorIconsLight.videoCamera,
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: GridView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: participants.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 14,
-              crossAxisSpacing: 14,
-              childAspectRatio: 0.8,
-            ),
-            itemBuilder: (context, index) {
-              final name = participants[index];
-              final firstLetter = name.isEmpty
-                  ? '?'
-                  : name.characters.first.toUpperCase();
-
-              return Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+        Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Row(
                 children: [
-                  Container(
-                    width: 86,
-                    height: 86,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF6B5CF6), Color(0xFF3A4A85)],
-                      ),
-                      border: Border.all(
-                        color: const Color(0xFF6B5CF6),
-                        width: 2,
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      firstLetter,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                  _ModeChip(
+                    label: _lowBandwidthMode
+                        ? 'Low Bandwidth ON'
+                        : 'Low Bandwidth',
+                    onTap: _toggleLowBandwidthMode,
+                    highlighted: _lowBandwidthMode,
+                    icon: PhosphorIconsLight.wifiLow,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    name,
-                    style: const TextStyle(color: _textPrimary, fontSize: 14),
+                  const SizedBox(width: 8),
+                  _ModeChip(
+                    label: _isVideoMode ? 'Audio Only' : 'Video Mode',
+                    onTap: _switchAudioVideoMode,
+                    highlighted: !_isVideoMode,
+                    icon: _isVideoMode
+                        ? PhosphorIconsLight.waveform
+                        : PhosphorIconsLight.videoCamera,
                   ),
                 ],
-              );
-            },
-          ),
+              ),
+            ),
+            Expanded(
+              child: GridView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 92),
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: participants.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 14,
+                  crossAxisSpacing: 14,
+                  childAspectRatio: 0.8,
+                ),
+                itemBuilder: (context, index) {
+                  final name = participants[index];
+                  final firstLetter = name.isEmpty
+                      ? '?'
+                      : name.characters.first.toUpperCase();
+
+                  return Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 86,
+                        height: 86,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF6B5CF6), Color(0xFF3A4A85)],
+                          ),
+                          border: Border.all(
+                            color: const Color(0xFF6B5CF6),
+                            width: 2,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          firstLetter,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          color: _textPrimary,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
         ),
-        Container(
-          margin: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            0,
-            AppSpacing.lg,
-            AppSpacing.lg,
-          ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.sm,
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.card,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppColors.border),
-            boxShadow: AppTheme.softShadow,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _CallCircleButton(
-                icon: _isMuted
-                    ? PhosphorIconsLight.microphoneSlash
-                    : PhosphorIconsLight.microphone,
-                onTap: _toggleMute,
-              ),
-              _CallCircleButton(
-                icon: _isVideoMode
-                    ? PhosphorIconsLight.waveform
-                    : PhosphorIconsLight.videoCamera,
-                onTap: _switchAudioVideoMode,
-                isPrimary: true,
-              ),
-              _CallCircleButton(
-                icon: PhosphorIconsLight.phoneDisconnect,
-                onTap: () => _leaveVoiceCall(notifyOthers: true),
-                isDanger: true,
-              ),
-            ],
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 16,
+          child: Center(
+            child: _FloatingCallDock(
+              isMuted: _isMuted,
+              isCameraOn: _isCameraOn,
+              isVideoMode: _isVideoMode,
+              isScreenSharing: _isScreenSharing,
+              micEnabled: !_isMutedByHost && !(_presentationMode && !_isHost),
+              cameraEnabled: _isVideoMode && !_isScreenSharing,
+              onToggleMute: _toggleMute,
+              onToggleCamera: _toggleCamera,
+              onToggleShare: _isScreenSharing ? _stopScreenShare : _startScreenShare,
+              onLeave: () => _leaveVoiceCall(notifyOthers: true),
+              onMore: () => _openCallMoreSheet(context),
+            ),
           ),
         ),
       ],
@@ -1959,200 +1947,245 @@ class _RoomScreenState extends State<RoomScreen> {
       });
     }
 
-    return Column(
+    return Stack(
       children: [
-        if (_isScreenSharing)
-          Container(
-            margin: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF11172B),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: _panelBorder),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  PhosphorIconsLight.screencast,
-                  color: _textPrimary,
-                  size: 16,
+        Column(
+          children: [
+            if (_isScreenSharing)
+              Container(
+                margin: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF11172B),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: _panelBorder),
                 ),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Text(
-                    'You are sharing screen',
-                    style: TextStyle(color: _textPrimary),
-                  ),
-                ),
-                InkWell(
-                  onTap: _stopScreenShare,
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE4574D),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text(
-                      'Stop',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-          child: Row(
-            children: [
-              _ModeChip(
-                label: _lowBandwidthMode ? 'Low Bandwidth ON' : 'Low Bandwidth',
-                onTap: _toggleLowBandwidthMode,
-                highlighted: _lowBandwidthMode,
-                icon: PhosphorIconsLight.wifiLow,
-              ),
-              const SizedBox(width: 8),
-              _ModeChip(
-                label: _isVideoMode ? 'Audio Only' : 'Video Mode',
-                onTap: _switchAudioVideoMode,
-                highlighted: !_isVideoMode,
-                icon: _isVideoMode
-                    ? PhosphorIconsLight.waveform
-                    : PhosphorIconsLight.videoCamera,
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: GridView.builder(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: tiles.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 6,
-              crossAxisSpacing: 6,
-              childAspectRatio: 0.98,
-            ),
-            itemBuilder: (context, index) {
-              final tile = tiles[index];
-              final renderer = tile['renderer'] as RTCVideoRenderer;
-              final isLocal = tile['local'] as bool;
-              final name = tile['name'] as String;
-
-              return ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Stack(
+                child: Row(
                   children: [
-                    Positioned.fill(
-                      child: renderer.srcObject == null
-                          ? Container(
-                              color: const Color(0xFF0F152A),
-                              alignment: Alignment.center,
-                              child: const Icon(
-                                PhosphorIconsLight.videoCameraSlash,
-                                color: _textMuted,
-                              ),
-                            )
-                          : RTCVideoView(
-                              renderer,
-                              mirror: isLocal,
-                              objectFit: RTCVideoViewObjectFit
-                                  .RTCVideoViewObjectFitCover,
-                            ),
+                    const Icon(
+                      PhosphorIconsLight.screencast,
+                      color: _textPrimary,
+                      size: 16,
                     ),
-                    Positioned(
-                      left: 6,
-                      top: 6,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        color: Colors.black45,
-                        child: Text(
-                          name,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                          ),
-                        ),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'You are sharing screen',
+                        style: TextStyle(color: _textPrimary),
                       ),
                     ),
-                    Positioned(
-                      right: 6,
-                      top: 6,
-                      child: Icon(
-                        _isMuted && isLocal
-                            ? PhosphorIconsLight.microphoneSlash
-                            : PhosphorIconsLight.microphone,
-                        color: Colors.white,
-                        size: 16,
+                    InkWell(
+                      onTap: _stopScreenShare,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE4574D),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'Stop',
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
                     ),
                   ],
                 ),
-              );
-            },
+              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+              child: Row(
+                children: [
+                  _ModeChip(
+                    label: _lowBandwidthMode
+                        ? 'Low Bandwidth ON'
+                        : 'Low Bandwidth',
+                    onTap: _toggleLowBandwidthMode,
+                    highlighted: _lowBandwidthMode,
+                    icon: PhosphorIconsLight.wifiLow,
+                  ),
+                  const SizedBox(width: 8),
+                  _ModeChip(
+                    label: _isVideoMode ? 'Audio Only' : 'Video Mode',
+                    onTap: _switchAudioVideoMode,
+                    highlighted: !_isVideoMode,
+                    icon: _isVideoMode
+                        ? PhosphorIconsLight.waveform
+                        : PhosphorIconsLight.videoCamera,
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: GridView.builder(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 92),
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: tiles.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 6,
+                  crossAxisSpacing: 6,
+                  childAspectRatio: 0.98,
+                ),
+                itemBuilder: (context, index) {
+                  final tile = tiles[index];
+                  final renderer = tile['renderer'] as RTCVideoRenderer;
+                  final isLocal = tile['local'] as bool;
+                  final name = tile['name'] as String;
+
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: renderer.srcObject == null
+                              ? Container(
+                                  color: const Color(0xFF0F152A),
+                                  alignment: Alignment.center,
+                                  child: const Icon(
+                                    PhosphorIconsLight.videoCameraSlash,
+                                    color: _textMuted,
+                                  ),
+                                )
+                              : RTCVideoView(
+                                  renderer,
+                                  mirror: isLocal,
+                                  objectFit: RTCVideoViewObjectFit
+                                      .RTCVideoViewObjectFitCover,
+                                ),
+                        ),
+                        Positioned(
+                          left: 6,
+                          top: 6,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            color: Colors.black45,
+                            child: Text(
+                              name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          right: 6,
+                          top: 6,
+                          child: Icon(
+                            _isMuted && isLocal
+                                ? PhosphorIconsLight.microphoneSlash
+                                : PhosphorIconsLight.microphone,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 16,
+          child: Center(
+            child: _FloatingCallDock(
+              isMuted: _isMuted,
+              isCameraOn: _isCameraOn,
+              isVideoMode: _isVideoMode,
+              isScreenSharing: _isScreenSharing,
+              micEnabled: !_isMutedByHost && !(_presentationMode && !_isHost),
+              cameraEnabled: _isVideoMode && !_isScreenSharing,
+              onToggleMute: _toggleMute,
+              onToggleCamera: _toggleCamera,
+              onToggleShare: _isScreenSharing ? _stopScreenShare : _startScreenShare,
+              onLeave: () => _leaveVoiceCall(notifyOthers: true),
+              onMore: () => _openCallMoreSheet(context),
+            ),
           ),
         ),
-        Container(
-          margin: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            0,
-            AppSpacing.lg,
-            AppSpacing.lg,
-          ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.sm,
-          ),
+      ],
+    );
+  }
+
+  void _openCallMoreSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          margin: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.all(AppSpacing.xl),
           decoration: BoxDecoration(
             color: AppColors.card,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(color: AppColors.border),
             boxShadow: AppTheme.softShadow,
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _CallCircleButton(
-                icon: _isCameraOn
-                    ? PhosphorIconsLight.videoCamera
-                    : PhosphorIconsLight.videoCameraSlash,
-                onTap: _toggleCamera,
+              Row(
+                children: [
+                  Text(
+                    'Call controls',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(PhosphorIconsLight.x),
+                  ),
+                ],
               ),
-              _CallCircleButton(
-                icon: _isMuted
-                    ? PhosphorIconsLight.microphoneSlash
-                    : PhosphorIconsLight.microphone,
-                onTap: _toggleMute,
-              ),
-              _CallCircleButton(
-                icon: PhosphorIconsLight.phoneDisconnect,
-                onTap: () => _leaveVoiceCall(notifyOthers: true),
-                isDanger: true,
-              ),
-              _CallCircleButton(
-                icon: _isScreenSharing
-                    ? PhosphorIconsLight.screencast
-                    : PhosphorIconsLight.monitorArrowUp,
-                onTap: _isScreenSharing ? _stopScreenShare : _startScreenShare,
-              ),
-              _CallCircleButton(
-                icon: _isVideoMode
-                    ? PhosphorIconsLight.waveform
-                    : PhosphorIconsLight.videoCamera,
-                onTap: _switchAudioVideoMode,
+              const SizedBox(height: AppSpacing.md),
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: [
+                  _ModeChip(
+                    label: _lowBandwidthMode
+                        ? 'Low Bandwidth ON'
+                        : 'Low Bandwidth',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      _toggleLowBandwidthMode();
+                    },
+                    highlighted: _lowBandwidthMode,
+                    icon: _lowBandwidthMode
+                        ? PhosphorIconsLight.wifiLow
+                        : PhosphorIconsLight.wifiHigh,
+                  ),
+                  _ModeChip(
+                    label: _isVideoMode ? 'Switch to Audio' : 'Switch to Video',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      _switchAudioVideoMode();
+                    },
+                    highlighted: !_isVideoMode,
+                    icon: _isVideoMode
+                        ? PhosphorIconsLight.waveform
+                        : PhosphorIconsLight.videoCamera,
+                  ),
+                ],
               ),
             ],
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 
