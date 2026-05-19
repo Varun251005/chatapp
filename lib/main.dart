@@ -3177,8 +3177,13 @@ class _RoomScreenState extends State<RoomScreen> {
                         child: SizedBox(
                           width: sidebarWidth,
                           child: _MiniSidebar(
-                            expanded: _sidebarExpanded || isTablet,
+                            expanded: _sidebarExpanded,
                             active: activeSection,
+                            onToggleExpand: () {
+                              setState(() {
+                                _sidebarExpanded = !_sidebarExpanded;
+                              });
+                            },
                             onWhiteboard: () {
                               _closeOverlays();
                             },
@@ -3476,6 +3481,7 @@ class _MiniSidebar extends StatelessWidget {
   const _MiniSidebar({
     required this.expanded,
     required this.active,
+    required this.onToggleExpand,
     required this.onWhiteboard,
     required this.onChat,
     required this.onParticipants,
@@ -3484,6 +3490,7 @@ class _MiniSidebar extends StatelessWidget {
 
   final bool expanded;
   final _MiniSidebarSection active;
+  final VoidCallback onToggleExpand;
   final VoidCallback onWhiteboard;
   final VoidCallback onChat;
   final VoidCallback onParticipants;
@@ -3547,13 +3554,7 @@ class _MiniSidebar extends StatelessWidget {
           ),
           const Spacer(),
           InkWell(
-            onTap: () {
-              // On desktop, the parent controls hover expansion.
-              // On tablet, this still provides an explicit affordance.
-              if (MediaQuery.of(context).size.width < 1200) {
-                // no-op here; expansion is handled by parent.
-              }
-            },
+            onTap: onToggleExpand,
             borderRadius: BorderRadius.circular(16),
             child: Container(
               height: 40,
