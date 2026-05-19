@@ -17,7 +17,7 @@ void main() {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const ChatApp());
 
-    expect(find.text('EchoRoom'), findsOneWidget);
+    expect(find.text('Room'), findsOneWidget);
     expect(find.text('Enter your nickname'), findsOneWidget);
     expect(find.text('Continue'), findsOneWidget);
     expect(find.byType(TextField), findsOneWidget);
