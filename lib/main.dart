@@ -1835,6 +1835,7 @@ class _RoomScreenState extends State<RoomScreen> {
 
   Widget _buildVoiceCallScreen() {
     final participants = _callParticipantNames();
+    final bottomInset = MediaQuery.of(context).padding.bottom;
 
     return Stack(
       children: [
@@ -1866,7 +1867,7 @@ class _RoomScreenState extends State<RoomScreen> {
             ),
             Expanded(
               child: GridView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 92),
+                padding: EdgeInsets.fromLTRB(16, 12, 16, 92 + bottomInset),
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: participants.length,
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -1925,7 +1926,7 @@ class _RoomScreenState extends State<RoomScreen> {
         Positioned(
           left: 0,
           right: 0,
-          bottom: 16,
+          bottom: 16 + bottomInset,
           child: Center(
             child: _FloatingCallDock(
               isMuted: _isMuted,
@@ -1948,6 +1949,7 @@ class _RoomScreenState extends State<RoomScreen> {
 
   Widget _buildVideoCallScreen() {
     final tiles = <Map<String, dynamic>>[];
+    final bottomInset = MediaQuery.of(context).padding.bottom;
 
     tiles.add({'name': 'You', 'renderer': _localRenderer, 'local': true});
 
@@ -2034,7 +2036,7 @@ class _RoomScreenState extends State<RoomScreen> {
             ),
             Expanded(
               child: GridView.builder(
-                padding: const EdgeInsets.fromLTRB(8, 8, 8, 92),
+                padding: EdgeInsets.fromLTRB(8, 8, 8, 92 + bottomInset),
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: tiles.length,
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -2110,7 +2112,7 @@ class _RoomScreenState extends State<RoomScreen> {
         Positioned(
           left: 0,
           right: 0,
-          bottom: 16,
+          bottom: 16 + bottomInset,
           child: Center(
             child: _FloatingCallDock(
               isMuted: _isMuted,
@@ -3021,19 +3023,9 @@ class _RoomScreenState extends State<RoomScreen> {
       );
     }
 
-    final isCompact = MediaQuery.of(context).size.width < 1100;
     return Scaffold(
       appBar: _buildRoomHeader(
         context,
-        showChatToggle: isCompact,
-        chatVisible: _showChatPanel,
-        onToggleChat: isCompact
-            ? () {
-                setState(() {
-                  _showChatPanel = !_showChatPanel;
-                });
-              }
-            : null,
       ),
       body: _GradientBackground(
         child: LayoutBuilder(
@@ -3199,7 +3191,9 @@ class _RoomScreenState extends State<RoomScreen> {
             }
 
             final sidebarWidth = _sidebarExpanded ? 240.0 : 72.0;
-            final chatWidth = 320.0;
+            final panelWidth = isTablet
+              ? (width * 0.42).clamp(280.0, 320.0)
+              : 320.0;
             final panelTopPadding = AppSpacing.md;
             final panelRightPadding = AppSpacing.md;
             final panelBottomPadding = AppSpacing.md;
@@ -3214,7 +3208,9 @@ class _RoomScreenState extends State<RoomScreen> {
 
             final showScrim = isTablet && (_showChatPanel || _showParticipantsPanel || _showSettingsPanel);
             final isChatDocked = !isTablet;
-            final dockedRightInset = (_showChatPanel && isChatDocked) ? (chatWidth + AppSpacing.lg) : 0.0;
+            final dockedRightInset = (_showChatPanel && isChatDocked)
+              ? (panelWidth + panelRightPadding + AppSpacing.lg)
+              : 0.0;
 
             return Padding(
               padding: const EdgeInsets.all(AppSpacing.md),
@@ -3297,7 +3293,7 @@ class _RoomScreenState extends State<RoomScreen> {
                     ),
                   _SlidePanel(
                     visible: _showChatPanel,
-                    width: chatWidth,
+                    width: panelWidth,
                     top: panelTopPadding,
                     right: panelRightPadding,
                     bottom: panelBottomPadding,
@@ -3306,7 +3302,7 @@ class _RoomScreenState extends State<RoomScreen> {
                   ),
                   _SlidePanel(
                     visible: _showParticipantsPanel,
-                    width: chatWidth,
+                    width: panelWidth,
                     top: panelTopPadding,
                     right: panelRightPadding,
                     bottom: panelBottomPadding,
@@ -3315,7 +3311,7 @@ class _RoomScreenState extends State<RoomScreen> {
                   ),
                   _SlidePanel(
                     visible: _showSettingsPanel,
-                    width: chatWidth,
+                    width: panelWidth,
                     top: panelTopPadding,
                     right: panelRightPadding,
                     bottom: panelBottomPadding,
