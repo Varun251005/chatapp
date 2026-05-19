@@ -3839,6 +3839,143 @@ class _CallCircleButton extends StatelessWidget {
   }
 }
 
+class _FloatingCallDock extends StatelessWidget {
+  const _FloatingCallDock({
+    required this.isMuted,
+    required this.isCameraOn,
+    required this.isVideoMode,
+    required this.isScreenSharing,
+    required this.micEnabled,
+    required this.cameraEnabled,
+    required this.onToggleMute,
+    required this.onToggleCamera,
+    required this.onToggleShare,
+    required this.onMore,
+    required this.onLeave,
+  });
+
+  final bool isMuted;
+  final bool isCameraOn;
+  final bool isVideoMode;
+  final bool isScreenSharing;
+  final bool micEnabled;
+  final bool cameraEnabled;
+  final VoidCallback onToggleMute;
+  final VoidCallback onToggleCamera;
+  final VoidCallback onToggleShare;
+  final VoidCallback onMore;
+  final VoidCallback onLeave;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.border),
+        boxShadow: AppTheme.softShadow,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _DockCircleButton(
+            icon: isMuted
+                ? PhosphorIconsLight.microphoneSlash
+                : PhosphorIconsLight.microphone,
+            onTap: micEnabled ? onToggleMute : null,
+            active: !isMuted,
+          ),
+          const SizedBox(width: 10),
+          _DockCircleButton(
+            icon: isCameraOn
+                ? PhosphorIconsLight.videoCamera
+                : PhosphorIconsLight.videoCameraSlash,
+            onTap: cameraEnabled ? onToggleCamera : null,
+            active: isVideoMode && isCameraOn,
+          ),
+          const SizedBox(width: 10),
+          _DockCircleButton(
+            icon: isScreenSharing
+                ? PhosphorIconsLight.screencast
+                : PhosphorIconsLight.monitorArrowUp,
+            onTap: isVideoMode ? onToggleShare : null,
+            active: isScreenSharing,
+          ),
+          const SizedBox(width: 10),
+          _DockCircleButton(
+            icon: PhosphorIconsLight.dotsThree,
+            onTap: onMore,
+          ),
+          const SizedBox(width: 10),
+          _DockCircleButton(
+            icon: PhosphorIconsLight.phoneDisconnect,
+            onTap: onLeave,
+            danger: true,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DockCircleButton extends StatelessWidget {
+  const _DockCircleButton({
+    required this.icon,
+    required this.onTap,
+    this.active = false,
+    this.danger = false,
+  });
+
+  final IconData icon;
+  final VoidCallback? onTap;
+  final bool active;
+  final bool danger;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+
+    Color bgColor = AppColors.background;
+    Color borderColor = AppColors.border;
+    Color iconColor = AppColors.textSecondary;
+
+    if (danger) {
+      bgColor = AppColors.danger;
+      borderColor = AppColors.danger;
+      iconColor = Colors.white;
+    } else if (active) {
+      bgColor = AppColors.accentSoft;
+      borderColor = AppColors.accentSoft;
+      iconColor = AppColors.accent;
+    }
+
+    if (!enabled && !danger) {
+      bgColor = AppColors.background;
+      borderColor = AppColors.border;
+      iconColor = AppColors.textSecondary;
+    }
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Opacity(
+        opacity: enabled || danger ? 1 : 0.55,
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: bgColor,
+            shape: BoxShape.circle,
+            border: Border.all(color: borderColor),
+          ),
+          child: Icon(icon, size: 20, color: iconColor),
+        ),
+      ),
+    );
+  }
+}
+
 class _ModeChip extends StatelessWidget {
   const _ModeChip({
     required this.label,
