@@ -2698,8 +2698,11 @@ class _RoomScreenState extends State<RoomScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                runSpacing: 10,
+                spacing: 12,
                 children: [
                   const Text(
                     'Shared Whiteboard',
@@ -2712,6 +2715,10 @@ class _RoomScreenState extends State<RoomScreen> {
                     onPressed: _clearBoard,
                     icon: const Icon(PhosphorIconsLight.broom),
                     label: const Text('Clear'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 40),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                    ),
                   ),
                 ],
               ),
@@ -2728,95 +2735,99 @@ class _RoomScreenState extends State<RoomScreen> {
                     border: Border.all(color: AppColors.border),
                     boxShadow: AppTheme.softShadow,
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _BoardToolIconButton(
-                        icon: PhosphorIconsLight.pencilSimple,
-                        selected: _selectedTool == _BoardTool.pen,
-                        onTap: () => setState(() {
-                          _selectedTool = _BoardTool.pen;
-                        }),
-                      ),
-                      _BoardToolIconButton(
-                        icon: PhosphorIconsLight.pencil,
-                        selected: _selectedTool == _BoardTool.pencil,
-                        onTap: () => setState(() {
-                          _selectedTool = _BoardTool.pencil;
-                        }),
-                      ),
-                      _BoardToolIconButton(
-                        icon: PhosphorIconsLight.highlighter,
-                        selected: _selectedTool == _BoardTool.marker,
-                        onTap: () => setState(() {
-                          _selectedTool = _BoardTool.marker;
-                        }),
-                      ),
-                      _BoardToolIconButton(
-                        icon: PhosphorIconsLight.eraser,
-                        selected: _selectedTool == _BoardTool.eraser,
-                        onTap: () => setState(() {
-                          _selectedTool = _BoardTool.eraser;
-                        }),
-                      ),
-                      _BoardToolIconButton(
-                        icon: PhosphorIconsLight.square,
-                        selected: _selectedTool == _BoardTool.rect,
-                        onTap: () => setState(() {
-                          _selectedTool = _BoardTool.rect;
-                        }),
-                      ),
-                      _BoardToolIconButton(
-                        icon: PhosphorIconsLight.circle,
-                        selected: _selectedTool == _BoardTool.circle,
-                        onTap: () => setState(() {
-                          _selectedTool = _BoardTool.circle;
-                        }),
-                      ),
-                      _BoardToolIconButton(
-                        icon: PhosphorIconsLight.textT,
-                        selected: _selectedTool == _BoardTool.text,
-                        onTap: () => setState(() {
-                          _selectedTool = _BoardTool.text;
-                        }),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      _ColorDot(
-                        color: Colors.white,
-                        selected: _selectedColor == Colors.white,
-                        onTap: () => setState(() {
-                          _selectedColor = Colors.white;
-                        }),
-                      ),
-                      _ColorDot(
-                        color: Colors.green.shade500,
-                        selected: _selectedColor == Colors.green.shade500,
-                        onTap: () => setState(() {
-                          _selectedColor = Colors.green.shade500;
-                        }),
-                      ),
-                      _ColorDot(
-                        color: Colors.blue.shade400,
-                        selected: _selectedColor == Colors.blue.shade400,
-                        onTap: () => setState(() {
-                          _selectedColor = Colors.blue.shade400;
-                        }),
-                      ),
-                      _ColorDot(
-                        color: Colors.purple.shade400,
-                        selected: _selectedColor == Colors.purple.shade400,
-                        onTap: () => setState(() {
-                          _selectedColor = Colors.purple.shade400;
-                        }),
-                      ),
-                      _ColorDot(
-                        color: Colors.orange.shade400,
-                        selected: _selectedColor == Colors.orange.shade400,
-                        onTap: () => setState(() {
-                          _selectedColor = Colors.orange.shade400;
-                        }),
-                      ),
-                    ],
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _BoardToolIconButton(
+                          icon: PhosphorIconsLight.pencilSimple,
+                          selected: _selectedTool == _BoardTool.pen,
+                          onTap: () => setState(() {
+                            _selectedTool = _BoardTool.pen;
+                          }),
+                        ),
+                        _BoardToolIconButton(
+                          icon: PhosphorIconsLight.pencil,
+                          selected: _selectedTool == _BoardTool.pencil,
+                          onTap: () => setState(() {
+                            _selectedTool = _BoardTool.pencil;
+                          }),
+                        ),
+                        _BoardToolIconButton(
+                          icon: PhosphorIconsLight.highlighter,
+                          selected: _selectedTool == _BoardTool.marker,
+                          onTap: () => setState(() {
+                            _selectedTool = _BoardTool.marker;
+                          }),
+                        ),
+                        _BoardToolIconButton(
+                          icon: PhosphorIconsLight.eraser,
+                          selected: _selectedTool == _BoardTool.eraser,
+                          onTap: () => setState(() {
+                            _selectedTool = _BoardTool.eraser;
+                          }),
+                        ),
+                        _BoardToolIconButton(
+                          icon: PhosphorIconsLight.square,
+                          selected: _selectedTool == _BoardTool.rect,
+                          onTap: () => setState(() {
+                            _selectedTool = _BoardTool.rect;
+                          }),
+                        ),
+                        _BoardToolIconButton(
+                          icon: PhosphorIconsLight.circle,
+                          selected: _selectedTool == _BoardTool.circle,
+                          onTap: () => setState(() {
+                            _selectedTool = _BoardTool.circle;
+                          }),
+                        ),
+                        _BoardToolIconButton(
+                          icon: PhosphorIconsLight.textT,
+                          selected: _selectedTool == _BoardTool.text,
+                          onTap: () => setState(() {
+                            _selectedTool = _BoardTool.text;
+                          }),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        _ColorDot(
+                          color: Colors.white,
+                          selected: _selectedColor == Colors.white,
+                          onTap: () => setState(() {
+                            _selectedColor = Colors.white;
+                          }),
+                        ),
+                        _ColorDot(
+                          color: Colors.green.shade500,
+                          selected: _selectedColor == Colors.green.shade500,
+                          onTap: () => setState(() {
+                            _selectedColor = Colors.green.shade500;
+                          }),
+                        ),
+                        _ColorDot(
+                          color: Colors.blue.shade400,
+                          selected: _selectedColor == Colors.blue.shade400,
+                          onTap: () => setState(() {
+                            _selectedColor = Colors.blue.shade400;
+                          }),
+                        ),
+                        _ColorDot(
+                          color: Colors.purple.shade400,
+                          selected: _selectedColor == Colors.purple.shade400,
+                          onTap: () => setState(() {
+                            _selectedColor = Colors.purple.shade400;
+                          }),
+                        ),
+                        _ColorDot(
+                          color: Colors.orange.shade400,
+                          selected: _selectedColor == Colors.orange.shade400,
+                          onTap: () => setState(() {
+                            _selectedColor = Colors.orange.shade400;
+                          }),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
