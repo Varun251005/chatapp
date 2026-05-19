@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:http/http.dart' as http;
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -2549,11 +2550,32 @@ class _RoomScreenState extends State<RoomScreen> {
                 style: TextStyle(color: AppColors.textSecondary),
               ),
               const SizedBox(height: AppSpacing.xs),
-              SelectableText(
-                widget.roomLink,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: SelectableText(
+                      widget.roomLink,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                      ),
+                      maxLines: 1,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Copy',
+                    onPressed: () async {
+                      await Clipboard.setData(
+                        ClipboardData(text: widget.roomLink),
+                      );
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Copied room link')),
+                      );
+                    },
+                    icon: const Icon(PhosphorIconsLight.copy),
+                    color: AppColors.textSecondary,
+                  ),
+                ],
               ),
               const SizedBox(height: AppSpacing.md),
               Wrap(
@@ -3469,8 +3491,6 @@ class _MiniSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOut,
@@ -3526,13 +3546,33 @@ class _MiniSidebar extends StatelessWidget {
             onTap: onSettings,
           ),
           const Spacer(),
-          if (expanded)
-            Text(
-              'Workspace',
-              style: textTheme.labelMedium?.copyWith(
+          InkWell(
+            onTap: () {
+              // On desktop, the parent controls hover expansion.
+              // On tablet, this still provides an explicit affordance.
+              if (MediaQuery.of(context).size.width < 1200) {
+                // no-op here; expansion is handled by parent.
+              }
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              height: 40,
+              width: double.infinity,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Icon(
+                expanded
+                    ? PhosphorIconsLight.caretLeft
+                    : PhosphorIconsLight.caretRight,
+                size: 18,
                 color: AppColors.textSecondary,
               ),
             ),
+          ),
         ],
       ),
     );
