@@ -2301,7 +2301,7 @@ class _RoomScreenState extends State<RoomScreen> {
     );
   }
 
-  Widget _buildChatPanel(BuildContext context) {
+  Widget _buildChatPanel(BuildContext context, {bool showHeader = true}) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
@@ -2313,82 +2313,41 @@ class _RoomScreenState extends State<RoomScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text('Chat', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(width: AppSpacing.sm),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: AppSpacing.xs,
+          if (showHeader) ...[
+            Row(
+              children: [
+                Text(
+                  'Chat',
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-                decoration: BoxDecoration(
-                  color: AppColors.accentSoft,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Text(
-                  'Live',
-                  style: TextStyle(
-                    color: AppColors.accent,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                const SizedBox(width: AppSpacing.sm),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
                   ),
-                ),
-              ),
-              const Spacer(),
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppColors.accentSoft,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Center(
-                  child: Text(
-                    'J',
+                  decoration: BoxDecoration(
+                    color: AppColors.accentSoft,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    'Live',
                     style: TextStyle(
                       color: AppColors.accent,
-                      fontWeight: FontWeight.w600,
                       fontSize: 12,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Container(
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.accent,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: AppTheme.softShadow,
-                ),
-                child: TextButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(
-                    PhosphorIconsLight.userPlus,
-                    color: Colors.white,
-                    size: 16,
-                  ),
-                  label: const Text(
-                    'Invite',
-                    style: TextStyle(
-                      color: Colors.white,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(PhosphorIconsLight.dotsThree),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
+                const Spacer(),
+                IconButton(
+                  onPressed: () {},
+                  icon: const Icon(PhosphorIconsLight.dotsThree),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
           Expanded(
             child: _messages.isEmpty
                 ? Column(
@@ -3067,7 +3026,12 @@ class _RoomScreenState extends State<RoomScreen> {
                                         ],
                                       ),
                                       const SizedBox(height: AppSpacing.md),
-                                      Expanded(child: _buildChatPanel(context)),
+                                      Expanded(
+                                        child: _buildChatPanel(
+                                          context,
+                                          showHeader: false,
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -3154,6 +3118,14 @@ class _RoomScreenState extends State<RoomScreen> {
             final panelRightPadding = AppSpacing.md;
             final panelBottomPadding = AppSpacing.md;
 
+            final activeSection = _showSettingsPanel
+              ? _MiniSidebarSection.settings
+              : _showParticipantsPanel
+              ? _MiniSidebarSection.participants
+              : _showChatPanel
+              ? _MiniSidebarSection.chat
+              : _MiniSidebarSection.whiteboard;
+
             final showScrim = isTablet && (_showChatPanel || _showParticipantsPanel || _showSettingsPanel);
             final isChatDocked = !isTablet;
             final dockedRightInset = (_showChatPanel && isChatDocked) ? (chatWidth + AppSpacing.lg) : 0.0;
@@ -3184,7 +3156,7 @@ class _RoomScreenState extends State<RoomScreen> {
                           width: sidebarWidth,
                           child: _MiniSidebar(
                             expanded: _sidebarExpanded || isTablet,
-                            active: _MiniSidebarSection.whiteboard,
+                            active: activeSection,
                             onWhiteboard: () {
                               _closeOverlays();
                             },
