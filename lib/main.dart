@@ -668,8 +668,20 @@ class _RoomScreenState extends State<RoomScreen> {
     final message = payload['message']?.toString() ?? '';
     if (!mounted) return;
     setState(() {
-      _messages.add({'nickname': nickname, 'message': message});
+      _messages.add({
+        'nickname': nickname,
+        'message': message,
+        'time': _formatTime(DateTime.now()),
+      });
     });
+  }
+
+  String _formatTime(DateTime value) {
+    var hour = value.hour % 12;
+    if (hour == 0) hour = 12;
+    final minute = value.minute.toString().padLeft(2, '0');
+    final suffix = value.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:$minute $suffix';
   }
 
   void _registerInRoom() {
@@ -2411,84 +2423,103 @@ class _RoomScreenState extends State<RoomScreen> {
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
                       final item = _messages[index];
-                      final isMine = item['nickname'] == widget.nickname;
+                      final nickname = item['nickname'] ?? 'Unknown';
+                      final isMine = nickname == widget.nickname;
+                      final time = item['time'] ?? '';
+                      final initials = nickname.isNotEmpty
+                          ? nickname.characters.first.toUpperCase()
+                          : '?';
 
-                      if (isMine) {
-                        return Align(
-                          alignment: Alignment.centerRight,
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(vertical: 6),
-                            constraints: const BoxConstraints(maxWidth: 240),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.accent,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Text(
-                              item['message'] ?? '',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        );
-                      }
+                      final nameLabel = isMine ? 'You' : nickname;
 
                       return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             CircleAvatar(
-                              radius: 14,
+                              radius: 18,
                               backgroundColor: AppColors.accentSoft,
                               child: Text(
-                                (item['nickname'] ?? '?')
-                                    .characters
-                                    .first
-                                    .toUpperCase(),
+                                initials,
                                 style: const TextStyle(
                                   color: AppColors.accent,
+                                  fontWeight: FontWeight.w700,
                                   fontSize: 12,
                                 ),
                               ),
                             ),
                             const SizedBox(width: AppSpacing.sm),
-                            Flexible(
-                              child: Container(
-                                constraints: const BoxConstraints(maxWidth: 240),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.chatIncoming,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: AppColors.border),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item['nickname'] ?? 'Unknown',
-                                      style: const TextStyle(
-                                        color: AppColors.textSecondary,
-                                        fontSize: 11,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        nameLabel,
+                                        style: const TextStyle(
+                                          color: AppColors.textPrimary,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      Text(
+                                        time,
+                                        style: const TextStyle(
+                                          color: AppColors.textSecondary,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Align(
+                                    alignment: isMine
+                                        ? Alignment.centerRight
+                                        : Alignment.centerLeft,
+                                    child: Container(
+                                      constraints:
+                                          const BoxConstraints(maxWidth: 240),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 14,
+                                        vertical: 12,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        gradient: isMine
+                                            ? LinearGradient(
+                                                colors: [
+                                                  AppColors.accent,
+                                                  AppColors.accent
+                                                      .withOpacity(0.85),
+                                                ],
+                                              )
+                                            : null,
+                                        color: isMine
+                                            ? null
+                                            : AppColors.chatIncoming,
+                                        borderRadius:
+                                            BorderRadius.circular(18),
+                                        border: isMine
+                                            ? null
+                                            : Border.all(
+                                                color: AppColors.border,
+                                              ),
+                                      ),
+                                      child: Text(
+                                        item['message'] ?? '',
+                                        style: TextStyle(
+                                          color: isMine
+                                              ? Colors.white
+                                              : AppColors.textPrimary,
+                                          fontWeight: FontWeight.w500,
+                                          height: 1.25,
+                                        ),
                                       ),
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      item['message'] ?? '',
-                                      style: const TextStyle(
-                                        color: AppColors.textPrimary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
