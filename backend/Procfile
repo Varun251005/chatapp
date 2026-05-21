@@ -1,1 +1,1 @@
-web: gunicorn chat_backend.asgi:application -k uvicorn.workers.UvicornWorker
+web: gunicorn chat_backend.asgi:application -k uvicorn.workers.UvicornWorker --workers 1 --timeout 120
