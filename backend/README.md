@@ -137,7 +137,7 @@ python manage.py runserver
 Before opening Flutter web, verify backend API:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/rooms/create/ \
+curl -X POST https://chatapp-jba7.onrender.com/api/rooms/create/ \
     -H "Content-Type: application/json" \
     -d '{"nickname":"test"}'
 ```
@@ -150,6 +150,6 @@ If Flutter shows `ClientException: Failed to fetch`, usually backend is not runn
 
 The Flutter app connects to:
 
-- `ws://127.0.0.1:8000/ws/chat/<room_id>/`
+- `wss://chatapp-jba7.onrender.com/ws/chat/<room_id>/`
 
 If you run Flutter on an Android emulator, use `10.0.2.2` instead of `127.0.0.1`.
