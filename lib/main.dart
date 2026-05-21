@@ -4501,8 +4501,8 @@ class ActionCard extends StatelessWidget {
 }
 
 class ApiService {
-  static const String baseUrl = 'http://127.0.0.1:8000';
-  static const String wsBaseUrl = 'ws://127.0.0.1:8000/ws/chat/';
+  static const String baseUrl = 'https://chatapp-jba7.onrender.com';
+  static const String wsBaseUrl = 'wss://chatapp-jba7.onrender.com/ws/chat/';
 
   static Future<Map<String, dynamic>> createRoom(String nickname) async {
     final uri = Uri.parse('$baseUrl/api/rooms/create/');
