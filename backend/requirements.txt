@@ -23,7 +23,6 @@ channels_redis==4.3.0
 charset-normalizer==3.4.3
 click==8.1.7
 cloudevents==1.9.0
-cockpit @ file:///builddir/build/BUILD/cockpit-360.1-build/cockpit-360.1/tmp/wheel/cockpit-360.1-py3-none-any.whl#sha256=7ce868b58854dd32e336f23a9779654e5b0bfa20956c83c8331f25e6d706112c
 colored-traceback==0.3.0
 constantly==23.10.4
 crypt_r==3.13.1
@@ -33,8 +32,6 @@ cupshelpers==1.0
 Cython==3.1.3
 daphne==4.2.1
 dasbus==1.7
-dbus-python==1.4.0
-dbus_next==0.2.3
 deprecation==2.1.0
 distro==1.9.0
 dj-database-url==3.1.2
@@ -176,7 +173,6 @@ sos==4.11.1
 soupsieve==2.8
 sqlparse==0.5.5
 starlette==0.27.0
-systemd-python==235
 Twisted==25.5.0
 txaio==25.12.2
 typing-inspection==0.4.2
