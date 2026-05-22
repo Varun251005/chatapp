@@ -5,17 +5,20 @@ from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.security.websocket import AllowedHostsOriginValidator
 from django.core.asgi import get_asgi_application
 
-import chat_backend.routing
+import rooms.routing
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "chat_backend.settings")
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'chat_backend.settings')
 
 django_asgi_app = get_asgi_application()
 
-application = ProtocolTypeRouter(
-    {
-        "http": django_asgi_app,
-        "websocket": AllowedHostsOriginValidator(
-            AuthMiddlewareStack(URLRouter(chat_backend.routing.websocket_urlpatterns))
-        ),
-    }
-)
+application = ProtocolTypeRouter({
+    "http": django_asgi_app,
+
+    "websocket": AllowedHostsOriginValidator(
+        AuthMiddlewareStack(
+            URLRouter(
+                rooms.routing.websocket_urlpatterns
+            )
+        )
+    ),
+})

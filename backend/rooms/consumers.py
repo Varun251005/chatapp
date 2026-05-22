@@ -12,7 +12,7 @@ from .storage import (
 )
 
 
-class RoomChatConsumer(AsyncWebsocketConsumer):
+class RoomConsumer(AsyncWebsocketConsumer):
     room_members = {}
 
     async def connect(self):
