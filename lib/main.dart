@@ -2398,28 +2398,33 @@ class _RoomScreenState extends State<RoomScreen> {
           ],
           Expanded(
             child: _messages.isEmpty
-                ? Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(
-                        PhosphorIconsLight.chatsCircle,
-                        color: AppColors.accent,
-                        size: 56,
-                      ),
-                      SizedBox(height: AppSpacing.sm),
-                      Text(
-                        'No messages yet',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w600,
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(
+                          PhosphorIconsLight.chatsCircle,
+                          color: AppColors.accent,
+                          size: 56,
                         ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Start the conversation!',
-                        style: TextStyle(color: AppColors.textSecondary),
-                      ),
-                    ],
+                        SizedBox(height: AppSpacing.sm),
+                        Text(
+                          'No messages yet',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Start the conversation!',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
                   )
                 : ListView.builder(
                     itemCount: _messages.length,
