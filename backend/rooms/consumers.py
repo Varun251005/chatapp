@@ -3,18 +3,22 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 from .storage import (
+    cleanup_stale_presence,
     get_room,
     is_host,
     kick_user,
+    list_presence,
+    presence_exists,
+    register_presence,
     room_exists,
     set_presentation_mode,
     set_user_muted,
+    touch_presence,
+    unregister_presence,
 )
 
 
 class RoomConsumer(AsyncWebsocketConsumer):
-    room_members = {}
-
     async def connect(self):
         self.room_id = self.scope["url_route"]["kwargs"]["room_id"]
         self.group_name = f"room_{self.room_id}"
@@ -36,10 +40,7 @@ class RoomConsumer(AsyncWebsocketConsumer):
         if not self.client_id:
             return
 
-        members = self.room_members.get(self.room_id, {})
-        members.pop(self.client_id, None)
-        if not members and self.room_id in self.room_members:
-            self.room_members.pop(self.room_id, None)
+        unregister_presence(self.room_id, self.client_id)
 
         self.client_id = None
 
@@ -52,18 +53,23 @@ class RoomConsumer(AsyncWebsocketConsumer):
         )
 
     def _participants_payload(self):
-        members = self.room_members.get(self.room_id, {})
-        room = get_room(self.room_id)
+        cleanup_stale_presence(self.room_id)
+        try:
+            room = get_room(self.room_id)
+        except Exception:
+            return []
+
         host_nickname = room.get("host")
         muted_users = room.get("muted_users", set())
+        presences = list_presence(self.room_id)
         return [
             {
-                "client_id": member_id,
-                "nickname": data["nickname"],
-                "is_host": data["nickname"] == host_nickname,
-                "is_muted": data["nickname"] in muted_users,
+                "client_id": presence["client_id"],
+                "nickname": presence["nickname"],
+                "is_host": presence["nickname"] == host_nickname,
+                "is_muted": presence["nickname"] in muted_users,
             }
-            for member_id, data in members.items()
+            for presence in presences
         ]
 
     async def _send_room_state(self, target_client_id=None):
@@ -118,6 +124,9 @@ class RoomConsumer(AsyncWebsocketConsumer):
 
         message_type = str(payload.get("type", "")).strip()
 
+        if self.client_id:
+            touch_presence(self.room_id, self.client_id)
+
         if message_type == "room_register":
             client_id = str(payload.get("sender_id", "")).strip()
             nickname = str(payload.get("nickname", "")).strip()
@@ -126,10 +135,8 @@ class RoomConsumer(AsyncWebsocketConsumer):
 
             self.client_id = client_id
             self.nickname = nickname
-            self.room_members.setdefault(self.room_id, {})[client_id] = {
-                "nickname": nickname,
-                "channel_name": self.channel_name,
-            }
+
+            register_presence(self.room_id, client_id, nickname)
 
             await self._send_room_state()
             await self.channel_layer.group_send(
@@ -144,21 +151,19 @@ class RoomConsumer(AsyncWebsocketConsumer):
         if message_type == "host_set_presentation_mode":
             sender_id = str(payload.get("sender_id", "")).strip()
             enabled = bool(payload.get("enabled", False))
-            members = self.room_members.get(self.room_id, {})
-            sender = members.get(sender_id)
-            if not sender:
+            if not self.client_id or sender_id != self.client_id:
                 return
 
-            sender_nickname = sender["nickname"]
-            if not is_host(self.room_id, sender_nickname):
+            if not self.nickname or not is_host(self.room_id, self.nickname):
                 return
 
             room = set_presentation_mode(self.room_id, enabled)
             if enabled:
-                for member_id, member_data in members.items():
-                    if member_data["nickname"] != room.get("host"):
-                        set_user_muted(self.room_id, member_data["nickname"], True)
-                        await self._send_user_muted(member_id, True)
+                host_name = room.get("host")
+                for presence in list_presence(self.room_id):
+                    if presence["nickname"] != host_name:
+                        set_user_muted(self.room_id, presence["nickname"], True)
+                        await self._send_user_muted(presence["client_id"], True)
 
             await self._send_room_state()
             await self.channel_layer.group_send(
@@ -175,19 +180,30 @@ class RoomConsumer(AsyncWebsocketConsumer):
             target_id = str(payload.get("target_id", "")).strip()
             muted = bool(payload.get("muted", True))
 
-            members = self.room_members.get(self.room_id, {})
-            sender = members.get(sender_id)
-            target = members.get(target_id)
-            if not sender or not target:
+            if not self.client_id or sender_id != self.client_id:
                 return
 
-            if not is_host(self.room_id, sender["nickname"]):
+            if not self.nickname or not is_host(self.room_id, self.nickname):
                 return
 
-            if target["nickname"] == sender["nickname"]:
+            if not target_id or not presence_exists(self.room_id, target_id):
                 return
 
-            set_user_muted(self.room_id, target["nickname"], muted)
+            target_nickname = next(
+                (
+                    presence["nickname"]
+                    for presence in list_presence(self.room_id)
+                    if presence["client_id"] == target_id
+                ),
+                None,
+            )
+            if not target_nickname:
+                return
+
+            if target_nickname == self.nickname:
+                return
+
+            set_user_muted(self.room_id, target_nickname, muted)
             await self._send_user_muted(target_id, muted)
             await self.channel_layer.group_send(
                 self.group_name,
@@ -202,21 +218,32 @@ class RoomConsumer(AsyncWebsocketConsumer):
             sender_id = str(payload.get("sender_id", "")).strip()
             target_id = str(payload.get("target_id", "")).strip()
 
-            members = self.room_members.get(self.room_id, {})
-            sender = members.get(sender_id)
-            target = members.get(target_id)
-            if not sender or not target:
+            if not self.client_id or sender_id != self.client_id:
                 return
 
-            if not is_host(self.room_id, sender["nickname"]):
+            if not self.nickname or not is_host(self.room_id, self.nickname):
                 return
 
-            if target["nickname"] == sender["nickname"]:
+            if not target_id or not presence_exists(self.room_id, target_id):
                 return
 
-            kick_user(self.room_id, target["nickname"])
+            target_nickname = next(
+                (
+                    presence["nickname"]
+                    for presence in list_presence(self.room_id)
+                    if presence["client_id"] == target_id
+                ),
+                None,
+            )
+            if not target_nickname:
+                return
+
+            if target_nickname == self.nickname:
+                return
+
+            kick_user(self.room_id, target_nickname)
             await self._send_kick(target_id)
-            members.pop(target_id, None)
+            unregister_presence(self.room_id, target_id)
 
             await self._send_room_state()
             await self.channel_layer.group_send(
@@ -238,7 +265,7 @@ class RoomConsumer(AsyncWebsocketConsumer):
             "whiteboard_clear",
         }:
             sender_id = str(payload.get("sender_id", "")).strip()
-            if not sender_id:
+            if not sender_id or not self.client_id or sender_id != self.client_id:
                 return
 
             await self.channel_layer.group_send(
