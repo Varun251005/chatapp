@@ -558,7 +558,7 @@ class _RoomScreenState extends State<RoomScreen> {
     _clientId = '${widget.nickname}-${DateTime.now().millisecondsSinceEpoch}';
     _initRenderers();
     _channel = WebSocketChannel.connect(
-      Uri.parse('${ApiService.wsBaseUrl}${widget.roomId}/'),
+      ApiService.wsRoomUri(widget.roomId),
     );
 
     _channel.stream.listen((data) {
@@ -4473,7 +4473,12 @@ class ActionCard extends StatelessWidget {
 
 class ApiService {
   static const String baseUrl = 'https://chatapp-jba7.onrender.com';
-  static const String wsBaseUrl = 'wss://chatapp-jba7.onrender.com/ws/chat/';
+
+  static Uri wsRoomUri(String roomId) {
+    final httpUri = Uri.parse(baseUrl);
+    final wsScheme = httpUri.scheme == 'https' ? 'wss' : 'ws';
+    return Uri.parse('$wsScheme://${httpUri.authority}/ws/chat/$roomId/');
+  }
 
   static Future<Map<String, dynamic>> createRoom(String nickname) async {
     final uri = Uri.parse('$baseUrl/api/rooms/create/');
