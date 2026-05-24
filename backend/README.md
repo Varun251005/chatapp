@@ -1,10 +1,11 @@
-# Django backend (in-memory rooms + realtime chat)
+# Django backend (DB rooms + realtime chat)
 
 This folder contains beginner-friendly Django code for room creation/joining and realtime chat.
 
 ## Files
 
-- `rooms/storage.py`: in-memory dictionary storage (`rooms = {}`)
+- `rooms/models.py`: Room, members, and presence models
+- `rooms/storage.py`: database-backed room + presence helpers
 - `rooms/views.py`: create and join API views
 - `rooms/urls.py`: room API routes
 - `rooms/consumers.py`: websocket consumer for room chat
@@ -21,7 +22,8 @@ This folder contains beginner-friendly Django code for room creation/joining and
 
 ## Important note
 
-Because storage is in memory, all rooms are lost when the Django server restarts.
+- Rooms and membership are stored in the database (so they survive restarts).
+- If you run more than one server process/instance, you must use a shared Channels layer (Redis) for realtime chat/participants to work across instances.
 
 ## Example Django wiring
 
@@ -38,6 +40,8 @@ ASGI_APPLICATION = "chat_backend.asgi.application"
 
 CHANNEL_LAYERS = {
     "default": {
+        # Local dev: InMemoryChannelLayer is fine.
+        # Production / multiple instances: set REDIS_URL and use channels_redis.
         "BACKEND": "channels.layers.InMemoryChannelLayer",
     }
 }
