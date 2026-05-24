@@ -1,5 +1,6 @@
 import json
 
+from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 from .storage import (
@@ -19,40 +20,8 @@ from .storage import (
 
 
 class RoomConsumer(AsyncWebsocketConsumer):
-    async def connect(self):
-        self.room_id = self.scope["url_route"]["kwargs"]["room_id"]
-        self.group_name = f"room_{self.room_id}"
-        self.client_id = None
-        self.nickname = None
-
-        if not room_exists(self.room_id):
-            await self.close(code=4004)
-            return
-
-        await self.channel_layer.group_add(self.group_name, self.channel_name)
-        await self.accept()
-
-    async def disconnect(self, close_code):
-        await self._remove_member()
-        await self.channel_layer.group_discard(self.group_name, self.channel_name)
-
-    async def _remove_member(self):
-        if not self.client_id:
-            return
-
-        unregister_presence(self.room_id, self.client_id)
-
-        self.client_id = None
-
-        await self.channel_layer.group_send(
-            self.group_name,
-            {
-                "type": "room_participants",
-                "participants": self._participants_payload(),
-            },
-        )
-
-    def _participants_payload(self):
+    @database_sync_to_async
+    def _participants_payload_db(self):
         cleanup_stale_presence(self.room_id)
         try:
             room = get_room(self.room_id)
@@ -72,8 +41,51 @@ class RoomConsumer(AsyncWebsocketConsumer):
             for presence in presences
         ]
 
+    @database_sync_to_async
+    def _presence_nickname_db(self, client_id: str):
+        for presence in list_presence(self.room_id):
+            if presence.get("client_id") == client_id:
+                return presence.get("nickname")
+        return None
+
+    async def connect(self):
+        self.room_id = self.scope["url_route"]["kwargs"]["room_id"]
+        self.group_name = f"room_{self.room_id}"
+        self.client_id = None
+        self.nickname = None
+
+        exists = await database_sync_to_async(room_exists)(self.room_id)
+        if not exists:
+            await self.close(code=4004)
+            return
+
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        await self._remove_member()
+        await self.channel_layer.group_discard(self.group_name, self.channel_name)
+
+    async def _remove_member(self):
+        if not self.client_id:
+            return
+
+        await database_sync_to_async(unregister_presence)(self.room_id, self.client_id)
+
+        self.client_id = None
+
+        participants = await self._participants_payload_db()
+
+        await self.channel_layer.group_send(
+            self.group_name,
+            {
+                "type": "room_participants",
+                "participants": participants,
+            },
+        )
+
     async def _send_room_state(self, target_client_id=None):
-        room = get_room(self.room_id)
+        room = await database_sync_to_async(get_room)(self.room_id)
         payload = {
             "type": "room_state",
             "host": room.get("host"),
@@ -125,7 +137,7 @@ class RoomConsumer(AsyncWebsocketConsumer):
         message_type = str(payload.get("type", "")).strip()
 
         if self.client_id:
-            touch_presence(self.room_id, self.client_id)
+            await database_sync_to_async(touch_presence)(self.room_id, self.client_id)
 
         if message_type == "room_register":
             client_id = str(payload.get("sender_id", "")).strip()
@@ -136,14 +148,18 @@ class RoomConsumer(AsyncWebsocketConsumer):
             self.client_id = client_id
             self.nickname = nickname
 
-            register_presence(self.room_id, client_id, nickname)
+            await database_sync_to_async(register_presence)(
+                self.room_id, client_id, nickname
+            )
 
             await self._send_room_state()
+
+            participants = await self._participants_payload_db()
             await self.channel_layer.group_send(
                 self.group_name,
                 {
                     "type": "room_participants",
-                    "participants": self._participants_payload(),
+                    "participants": participants,
                 },
             )
             return
@@ -154,23 +170,36 @@ class RoomConsumer(AsyncWebsocketConsumer):
             if not self.client_id or sender_id != self.client_id:
                 return
 
-            if not self.nickname or not is_host(self.room_id, self.nickname):
+            if not self.nickname:
                 return
 
-            room = set_presentation_mode(self.room_id, enabled)
+            is_sender_host = await database_sync_to_async(is_host)(
+                self.room_id, self.nickname
+            )
+            if not is_sender_host:
+                return
+
+            room = await database_sync_to_async(set_presentation_mode)(
+                self.room_id, enabled
+            )
             if enabled:
                 host_name = room.get("host")
-                for presence in list_presence(self.room_id):
+                presences = await database_sync_to_async(list_presence)(self.room_id)
+                for presence in presences:
                     if presence["nickname"] != host_name:
-                        set_user_muted(self.room_id, presence["nickname"], True)
+                        await database_sync_to_async(set_user_muted)(
+                            self.room_id, presence["nickname"], True
+                        )
                         await self._send_user_muted(presence["client_id"], True)
 
             await self._send_room_state()
+
+            participants = await self._participants_payload_db()
             await self.channel_layer.group_send(
                 self.group_name,
                 {
                     "type": "room_participants",
-                    "participants": self._participants_payload(),
+                    "participants": participants,
                 },
             )
             return
@@ -183,33 +212,42 @@ class RoomConsumer(AsyncWebsocketConsumer):
             if not self.client_id or sender_id != self.client_id:
                 return
 
-            if not self.nickname or not is_host(self.room_id, self.nickname):
+            if not self.nickname:
                 return
 
-            if not target_id or not presence_exists(self.room_id, target_id):
-                return
-
-            target_nickname = next(
-                (
-                    presence["nickname"]
-                    for presence in list_presence(self.room_id)
-                    if presence["client_id"] == target_id
-                ),
-                None,
+            is_sender_host = await database_sync_to_async(is_host)(
+                self.room_id, self.nickname
             )
+            if not is_sender_host:
+                return
+
+            if not target_id:
+                return
+
+            target_exists = await database_sync_to_async(presence_exists)(
+                self.room_id, target_id
+            )
+            if not target_exists:
+                return
+
+            target_nickname = await self._presence_nickname_db(target_id)
             if not target_nickname:
                 return
 
             if target_nickname == self.nickname:
                 return
 
-            set_user_muted(self.room_id, target_nickname, muted)
+            await database_sync_to_async(set_user_muted)(
+                self.room_id, target_nickname, muted
+            )
             await self._send_user_muted(target_id, muted)
+
+            participants = await self._participants_payload_db()
             await self.channel_layer.group_send(
                 self.group_name,
                 {
                     "type": "room_participants",
-                    "participants": self._participants_payload(),
+                    "participants": participants,
                 },
             )
             return
@@ -221,36 +259,43 @@ class RoomConsumer(AsyncWebsocketConsumer):
             if not self.client_id or sender_id != self.client_id:
                 return
 
-            if not self.nickname or not is_host(self.room_id, self.nickname):
+            if not self.nickname:
                 return
 
-            if not target_id or not presence_exists(self.room_id, target_id):
-                return
-
-            target_nickname = next(
-                (
-                    presence["nickname"]
-                    for presence in list_presence(self.room_id)
-                    if presence["client_id"] == target_id
-                ),
-                None,
+            is_sender_host = await database_sync_to_async(is_host)(
+                self.room_id, self.nickname
             )
+            if not is_sender_host:
+                return
+
+            if not target_id:
+                return
+
+            target_exists = await database_sync_to_async(presence_exists)(
+                self.room_id, target_id
+            )
+            if not target_exists:
+                return
+
+            target_nickname = await self._presence_nickname_db(target_id)
             if not target_nickname:
                 return
 
             if target_nickname == self.nickname:
                 return
 
-            kick_user(self.room_id, target_nickname)
+            await database_sync_to_async(kick_user)(self.room_id, target_nickname)
             await self._send_kick(target_id)
-            unregister_presence(self.room_id, target_id)
+            await database_sync_to_async(unregister_presence)(self.room_id, target_id)
 
             await self._send_room_state()
+
+            participants = await self._participants_payload_db()
             await self.channel_layer.group_send(
                 self.group_name,
                 {
                     "type": "room_participants",
-                    "participants": self._participants_payload(),
+                    "participants": participants,
                 },
             )
             return
