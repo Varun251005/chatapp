@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -510,6 +511,7 @@ class _RoomScreenState extends State<RoomScreen> {
   late final WebSocketChannel _channel;
   final TextEditingController _messageController = TextEditingController();
   final List<Map<String, String>> _messages = [];
+  Timer? _presencePingTimer;
 
   final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
   MediaStream? _localStream;
@@ -565,10 +567,12 @@ class _RoomScreenState extends State<RoomScreen> {
     });
 
     _registerInRoom();
+    _startPresencePing();
   }
 
   @override
   void dispose() {
+    _presencePingTimer?.cancel();
     _disposeVoiceResources();
     _localRenderer.dispose();
     _messageController.dispose();
@@ -651,6 +655,18 @@ class _RoomScreenState extends State<RoomScreen> {
         'nickname': widget.nickname,
       }),
     );
+  }
+
+  void _startPresencePing() {
+    _presencePingTimer?.cancel();
+    _presencePingTimer = Timer.periodic(const Duration(seconds: 25), (_) {
+      try {
+        _channel.sink.add(
+          jsonEncode({'type': 'room_ping', 'sender_id': _clientId}),
+        );
+      } catch (_) {
+      }
+    });
   }
 
   bool get _isHost => _hostNickname == widget.nickname;
@@ -2295,11 +2311,6 @@ class _RoomScreenState extends State<RoomScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(PhosphorIconsLight.dotsThree),
-                ),
               ],
             ),
           ),
@@ -2332,10 +2343,6 @@ class _RoomScreenState extends State<RoomScreen> {
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.sm,
                     vertical: AppSpacing.xs,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.accentSoft,
-                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Text(
                     'Live',
