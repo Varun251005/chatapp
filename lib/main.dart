@@ -31,6 +31,7 @@ class ChatApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Room Chat App',
+      debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme(),
       home: const NicknameScreen(),
     );
@@ -83,27 +84,6 @@ class _NicknameScreenState extends State<NicknameScreen> {
               )
             : null,
         title: const Text('Room'),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: AppSpacing.lg),
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: 4,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.accentSoft,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Text(
-              'DEBUG',
-              style: TextStyle(
-                color: AppColors.accent,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
       ),
       body: SafeArea(
         child: Center(
@@ -300,27 +280,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text('Room'),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: AppSpacing.lg),
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: 4,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.accentSoft,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Text(
-              'DEBUG',
-              style: TextStyle(
-                color: AppColors.accent,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
       ),
       body: SafeArea(
         child: Center(
