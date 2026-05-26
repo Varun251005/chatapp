@@ -507,25 +507,48 @@ class _RoomScreenState extends State<RoomScreen> {
   }
 
   void _handleSocketPayload(Map<String, dynamic> payload) {
-    final payloadType = payload['type']?.toString();
+    final type = payload['type']?.toString();
 
-    if (payloadType != null && payloadType.startsWith('room_')) {
-      _handleRoomControlPayload(payload);
+    if (type == 'participant_join') {
+      final senderId = payload['sender_id']?.toString() ?? '';
+      final nickname = payload['nickname']?.toString() ?? '';
+      if (senderId.isEmpty || nickname.isEmpty) return;
+
+      if (!mounted) return;
+      setState(() {
+        _participantsById[senderId] = nickname;
+      });
+
+      // If we're already in a call, proactively connect to the new participant.
+      if (_isInCall && senderId != _clientId) {
+        _createPeerConnection(senderId, createOffer: true);
+      }
       return;
     }
 
-    if (payloadType != null && payloadType.startsWith('webrtc_')) {
+    if (type == 'participant_leave') {
+      final senderId = payload['sender_id']?.toString() ?? '';
+      if (senderId.isEmpty) return;
+
+      _removePeer(senderId);
+
+      if (!mounted) return;
+      setState(() {
+        _participantsById.remove(senderId);
+      });
+      return;
+    }
+
+    if (type != null && type.startsWith('webrtc_')) {
       _handleSignalingMessage(payload);
       return;
     }
 
-    if (payloadType != null && payloadType.startsWith('whiteboard_')) {
-      _handleWhiteboardPayload(payload);
-      return;
-    }
-
+    // Chat (server always sends type=chat_message, but keep a fallback).
     final nickname = payload['nickname']?.toString() ?? 'Unknown';
     final message = payload['message']?.toString() ?? '';
+    if (message.isEmpty) return;
+
     if (!mounted) return;
     setState(() {
       _messages.add({
@@ -544,501 +567,6 @@ class _RoomScreenState extends State<RoomScreen> {
     return '$hour:$minute $suffix';
   }
 
-  void _registerInRoom() {
-    _channel.sink.add(
-      jsonEncode({
-        'type': 'room_register',
-        'sender_id': _clientId,
-        'nickname': widget.nickname,
-      }),
-    );
-  }
-
-  void _startPresencePing() {
-    _presencePingTimer?.cancel();
-    _presencePingTimer = Timer.periodic(const Duration(seconds: 25), (_) {
-      try {
-        _channel.sink.add(
-          jsonEncode({'type': 'room_ping', 'sender_id': _clientId}),
-        );
-      } catch (_) {
-      }
-    });
-  }
-
-  bool get _isHost => _hostNickname == widget.nickname;
-
-  void _handleRoomControlPayload(Map<String, dynamic> payload) {
-    final payloadType = payload['type']?.toString() ?? '';
-
-    if (payloadType == 'room_state') {
-      final targetId = payload['target_id']?.toString();
-      if (targetId != null && targetId != _clientId) {
-        return;
-      }
-
-      final host = payload['host']?.toString();
-      final presentationMode = payload['presentation_mode'] == true;
-      final mutedUsers = ((payload['muted_users'] as List?) ?? [])
-          .map((item) => item.toString())
-          .toList();
-
-      if (!mounted) return;
-      setState(() {
-        _hostNickname = host;
-        _presentationMode = presentationMode;
-      });
-
-      final forcedMuted =
-          mutedUsers.contains(widget.nickname) ||
-          (_presentationMode && !_isHost);
-      _applyHostMute(forcedMuted);
-      return;
-    }
-
-    if (payloadType == 'room_participants') {
-      final participants = (payload['participants'] as List?) ?? [];
-      if (!mounted) return;
-      setState(() {
-        _participants = participants
-            .whereType<Map>()
-            .map(
-              (item) =>
-                  item.map((key, value) => MapEntry(key.toString(), value)),
-            )
-            .toList();
-      });
-      return;
-    }
-
-    if (payloadType == 'room_user_muted') {
-      final targetId = payload['target_id']?.toString();
-      if (targetId != _clientId) return;
-      final muted = payload['muted'] == true;
-      _applyHostMute(muted);
-      return;
-    }
-
-    if (payloadType == 'room_kicked') {
-      final targetId = payload['target_id']?.toString();
-      if (targetId != _clientId) return;
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('You were removed by host')));
-      Navigator.of(context).pop();
-    }
-  }
-
-  void _applyHostMute(bool muted) {
-    final stream = _localStream;
-    if (stream == null) {
-      if (mounted) {
-        setState(() {
-          _isMutedByHost = muted;
-          if (muted) _isMuted = true;
-        });
-      }
-      return;
-    }
-
-    for (final track in stream.getAudioTracks()) {
-      track.enabled = !muted;
-    }
-
-    if (!mounted) return;
-    setState(() {
-      _isMutedByHost = muted;
-      _isMuted = muted ? true : _isMuted;
-    });
-  }
-
-  void _sendHostAction(Map<String, dynamic> payload) {
-    _channel.sink.add(
-      jsonEncode({
-        ...payload,
-        'sender_id': _clientId,
-        'nickname': widget.nickname,
-      }),
-    );
-  }
-
-  void _setPresentationMode(bool enabled) {
-    if (!_isHost) return;
-    _sendHostAction({'type': 'host_set_presentation_mode', 'enabled': enabled});
-  }
-
-  void _muteUser(String targetId, bool muted) {
-    if (!_isHost) return;
-    _sendHostAction({
-      'type': 'host_mute_user',
-      'target_id': targetId,
-      'muted': muted,
-    });
-  }
-
-  void _kickUser(String targetId) {
-    if (!_isHost) return;
-    _sendHostAction({'type': 'host_kick_user', 'target_id': targetId});
-  }
-
-  void _handleWhiteboardPayload(Map<String, dynamic> payload) {
-    final senderId = payload['sender_id']?.toString() ?? '';
-    if (senderId == _clientId) return;
-
-    final payloadType = payload['type']?.toString() ?? '';
-
-    if (payloadType == 'whiteboard_clear') {
-      if (!mounted) return;
-      setState(() {
-        _boardItems.clear();
-        _remoteStrokes.clear();
-        _remoteShapes.clear();
-      });
-      return;
-    }
-
-    if (payloadType != 'whiteboard_draw') return;
-
-    final action = payload['action']?.toString() ?? 'move';
-    final tool = _toolFromKey(payload['tool']?.toString());
-
-    if (tool == _BoardTool.text && action == 'commit') {
-      final x = (payload['x'] as num?)?.toDouble();
-      final y = (payload['y'] as num?)?.toDouble();
-      final text = payload['text']?.toString().trim() ?? '';
-      if (x == null || y == null || text.isEmpty) return;
-      final colorValue = (payload['color'] as int?) ?? Colors.white.value;
-      final size = (payload['size'] as num?)?.toDouble() ?? _textToolSize;
-
-      if (!mounted) return;
-      setState(() {
-        _boardItems.add(
-          _BoardText(
-            position: _BoardPoint(x, y),
-            text: text,
-            color: Color(colorValue),
-            size: size,
-          ),
-        );
-      });
-      return;
-    }
-
-    final x = (payload['x'] as num?)?.toDouble();
-    final y = (payload['y'] as num?)?.toDouble();
-    if (x == null || y == null) return;
-
-    final colorValue = (payload['color'] as int?) ?? Colors.white.value;
-    final width = (payload['width'] as num?)?.toDouble() ?? 2;
-    final opacity = (payload['opacity'] as num?)?.toDouble() ?? 1;
-    final color = Color(colorValue);
-
-    if (tool == _BoardTool.rect || tool == _BoardTool.circle) {
-      if (action == 'start') {
-        final shape = _BoardShape(
-          tool: tool,
-          start: _BoardPoint(x, y),
-          end: _BoardPoint(x, y),
-          color: color,
-          width: width,
-          opacity: opacity,
-        );
-        _remoteShapes[senderId] = shape;
-        if (!mounted) return;
-        setState(() {
-          _boardItems.add(shape);
-        });
-        return;
-      }
-
-      final shape = _remoteShapes[senderId];
-      if (shape == null) return;
-      if (!mounted) return;
-      setState(() {
-        shape.end = _BoardPoint(x, y);
-        if (action == 'end') {
-          _remoteShapes.remove(senderId);
-        }
-      });
-      return;
-    }
-
-    if (action == 'start') {
-      final stroke = _BoardStroke(
-        tool: tool,
-        points: [_BoardPoint(x, y)],
-        color: color,
-        width: width,
-        opacity: opacity,
-      );
-      _remoteStrokes[senderId] = stroke;
-      if (!mounted) return;
-      setState(() {
-        _boardItems.add(stroke);
-      });
-      return;
-    }
-
-    final stroke = _remoteStrokes[senderId];
-    if (stroke == null) return;
-    if (!mounted) return;
-    setState(() {
-      stroke.points.add(_BoardPoint(x, y));
-      if (action == 'end') {
-        _remoteStrokes.remove(senderId);
-      }
-    });
-  }
-
-  void _onBoardPanStart(DragStartDetails details, Size size) {
-    if (_selectedTool == _BoardTool.text) return;
-
-    final point = _normalizeBoardPoint(details.localPosition, size);
-    if (point == null) return;
-
-    if (_selectedTool == _BoardTool.rect || _selectedTool == _BoardTool.circle) {
-      final shape = _BoardShape(
-        tool: _selectedTool,
-        start: point,
-        end: point,
-        color: _toolColor(_selectedTool),
-        width: _toolWidth(_selectedTool),
-        opacity: _toolOpacity(_selectedTool),
-      );
-      _activeShape = shape;
-      setState(() {
-        _boardItems.add(shape);
-      });
-      _sendWhiteboardDraw(
-        action: 'start',
-        point: point,
-        tool: _selectedTool,
-        color: shape.color,
-        width: shape.width,
-        opacity: shape.opacity,
-      );
-      return;
-    }
-
-    final stroke = _BoardStroke(
-      tool: _selectedTool,
-      points: [point],
-      color: _toolColor(_selectedTool),
-      width: _toolWidth(_selectedTool),
-      opacity: _toolOpacity(_selectedTool),
-    );
-    _activeStroke = stroke;
-    setState(() {
-      _boardItems.add(stroke);
-    });
-    _sendWhiteboardDraw(
-      action: 'start',
-      point: point,
-      tool: stroke.tool,
-      color: stroke.color,
-      width: stroke.width,
-      opacity: stroke.opacity,
-    );
-  }
-
-  void _onBoardPanUpdate(DragUpdateDetails details, Size size) {
-    if (_selectedTool == _BoardTool.text) return;
-
-    final point = _normalizeBoardPoint(details.localPosition, size);
-    if (point == null) return;
-
-    if (_activeShape != null) {
-      setState(() {
-        _activeShape!.end = point;
-      });
-      _sendWhiteboardDraw(
-        action: 'move',
-        point: point,
-        tool: _activeShape!.tool,
-      );
-      return;
-    }
-
-    if (_activeStroke == null) return;
-    setState(() {
-      _activeStroke!.points.add(point);
-    });
-    _sendWhiteboardDraw(
-      action: 'move',
-      point: point,
-      tool: _activeStroke!.tool,
-    );
-  }
-
-  void _onBoardPanEnd() {
-    if (_activeShape != null) {
-      final shape = _activeShape!;
-      _sendWhiteboardDraw(action: 'end', point: shape.end, tool: shape.tool);
-      _activeShape = null;
-      return;
-    }
-
-    if (_activeStroke != null) {
-      final stroke = _activeStroke!;
-      final lastPoint = stroke.points.isNotEmpty ? stroke.points.last : null;
-      if (lastPoint != null) {
-        _sendWhiteboardDraw(
-          action: 'end',
-          point: lastPoint,
-          tool: stroke.tool,
-        );
-      }
-      _activeStroke = null;
-    }
-  }
-
-  _BoardPoint? _normalizeBoardPoint(Offset offset, Size size) {
-    if (size.width <= 0 || size.height <= 0) return null;
-    final x = (offset.dx / size.width).clamp(0.0, 1.0);
-    final y = (offset.dy / size.height).clamp(0.0, 1.0);
-    return _BoardPoint(x, y);
-  }
-
-  void _sendWhiteboardDraw({
-    required String action,
-    required _BoardPoint point,
-    required _BoardTool tool,
-    Color? color,
-    double? width,
-    double? opacity,
-  }) {
-    final payload = <String, dynamic>{
-      'type': 'whiteboard_draw',
-      'action': action,
-      'tool': _toolKey(tool),
-      'x': point.x,
-      'y': point.y,
-      'sender_id': _clientId,
-      'nickname': widget.nickname,
-    };
-
-    if (color != null) payload['color'] = color.value;
-    if (width != null) payload['width'] = width;
-    if (opacity != null) payload['opacity'] = opacity;
-
-    _channel.sink.add(jsonEncode(payload));
-  }
-
-  Future<void> _addTextAt(Offset localOffset, Size size) async {
-    final point = _normalizeBoardPoint(localOffset, size);
-    if (point == null) return;
-
-    final controller = TextEditingController();
-    final text = await showDialog<String>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF121A33),
-          title: const Text('Add text'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(hintText: 'Type text'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () =>
-                  Navigator.pop(context, controller.text.trim()),
-              child: const Text('Add'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (!mounted) return;
-    final value = text?.trim() ?? '';
-    if (value.isEmpty) return;
-
-    setState(() {
-      _boardItems.add(
-        _BoardText(
-          position: point,
-          text: value,
-          color: _selectedColor,
-          size: _textToolSize,
-        ),
-      );
-    });
-
-    _channel.sink.add(
-      jsonEncode({
-        'type': 'whiteboard_draw',
-        'action': 'commit',
-        'tool': _toolKey(_BoardTool.text),
-        'x': point.x,
-        'y': point.y,
-        'text': value,
-        'color': _selectedColor.value,
-        'size': _textToolSize,
-        'sender_id': _clientId,
-        'nickname': widget.nickname,
-      }),
-    );
-  }
-
-  void _clearBoard() {
-    setState(() {
-      _boardItems.clear();
-      _remoteStrokes.clear();
-      _remoteShapes.clear();
-      _activeStroke = null;
-      _activeShape = null;
-    });
-
-    _channel.sink.add(
-      jsonEncode({
-        'type': 'whiteboard_clear',
-        'sender_id': _clientId,
-        'nickname': widget.nickname,
-      }),
-    );
-  }
-
-  double _toolWidth(_BoardTool tool) {
-    switch (tool) {
-      case _BoardTool.pencil:
-        return 2;
-      case _BoardTool.marker:
-        return 8;
-      case _BoardTool.eraser:
-        return 16;
-      case _BoardTool.rect:
-      case _BoardTool.circle:
-        return 3;
-      case _BoardTool.text:
-        return 0;
-      case _BoardTool.pen:
-      default:
-        return 3;
-    }
-  }
-
-  double _toolOpacity(_BoardTool tool) {
-    switch (tool) {
-      case _BoardTool.pencil:
-        return 0.6;
-      case _BoardTool.marker:
-        return 0.35;
-      default:
-        return 1.0;
-    }
-  }
-
-  Color _toolColor(_BoardTool tool) {
-    if (tool == _BoardTool.eraser) return _boardBgColor;
-    return _selectedColor;
-  }
 
   Future<void> _handleSignalingMessage(Map<String, dynamic> payload) async {
     final senderId = payload['sender_id']?.toString() ?? '';
@@ -1051,19 +579,6 @@ class _RoomScreenState extends State<RoomScreen> {
     }
 
     final messageType = payload['type']?.toString() ?? '';
-
-    if (messageType == 'webrtc_ready') {
-      if (_peers.containsKey(senderId)) return;
-      if (_peers.length >= _maxUsersInCall - 1) return;
-
-      await _createPeerConnection(senderId, createOffer: true);
-      return;
-    }
-
-    if (messageType == 'webrtc_leave') {
-      await _removePeer(senderId);
-      return;
-    }
 
     if (messageType == 'webrtc_offer') {
       final peer = await _createPeerConnection(senderId);
@@ -1144,7 +659,7 @@ class _RoomScreenState extends State<RoomScreen> {
         _isMuted = false;
       });
 
-      _sendSignalMessage({'type': 'webrtc_ready'});
+      await _connectToCallParticipants();
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1153,10 +668,18 @@ class _RoomScreenState extends State<RoomScreen> {
     }
   }
 
-  Future<void> _leaveVoiceCall({bool notifyOthers = true}) async {
-    if (notifyOthers && _isInCall) {
-      _sendSignalMessage({'type': 'webrtc_leave'});
+  Future<void> _connectToCallParticipants() async {
+    final remoteIds = _participantsById.keys
+        .where((id) => id != _clientId)
+        .take(_maxUsersInCall - 1)
+        .toList();
+
+    for (final remoteId in remoteIds) {
+      await _createPeerConnection(remoteId, createOffer: true);
     }
+  }
+
+  Future<void> _leaveVoiceCall() async {
 
     for (final peer in _peers.values) {
       await peer.connection.close();
@@ -1186,10 +709,6 @@ class _RoomScreenState extends State<RoomScreen> {
   }
 
   void _toggleMute() {
-    if (_isMutedByHost || (_presentationMode && !_isHost)) {
-      return;
-    }
-
     final stream = _localStream;
     if (stream == null) return;
 
@@ -1204,97 +723,6 @@ class _RoomScreenState extends State<RoomScreen> {
     setState(() {
       _isMuted = nextMuted;
     });
-  }
-
-  void _openHostControlsSheet() {
-    if (!_isHost) return;
-
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: const Color(0xFF11172B),
-      builder: (context) {
-        final others = _participants
-            .where((user) => user['client_id']?.toString() != _clientId)
-            .toList();
-
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Host Controls',
-                      style: TextStyle(
-                        color: _textPrimary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        const Text(
-                          'Presentation',
-                          style: TextStyle(color: _textMuted),
-                        ),
-                        Switch(
-                          value: _presentationMode,
-                          onChanged: _setPresentationMode,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                if (others.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Text(
-                      'No other users in room',
-                      style: TextStyle(color: _textMuted),
-                    ),
-                  )
-                else
-                  ...others.map((user) {
-                    final nickname = user['nickname']?.toString() ?? 'User';
-                    final targetId = user['client_id']?.toString() ?? '';
-                    final isMuted = user['is_muted'] == true;
-
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        nickname,
-                        style: const TextStyle(color: _textPrimary),
-                      ),
-                      trailing: Wrap(
-                        spacing: 6,
-                        children: [
-                          OutlinedButton(
-                            onPressed: targetId.isEmpty
-                                ? null
-                                : () => _muteUser(targetId, !isMuted),
-                            child: Text(isMuted ? 'Unmute' : 'Mute'),
-                          ),
-                          OutlinedButton(
-                            onPressed: targetId.isEmpty
-                                ? null
-                                : () => _kickUser(targetId),
-                            child: const Text('Kick'),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-              ],
-            ),
-          ),
-        );
-      },
-    );
   }
 
   void _toggleCamera() {
@@ -1472,7 +900,7 @@ class _RoomScreenState extends State<RoomScreen> {
       return;
     }
 
-    await _leaveVoiceCall(notifyOthers: true);
+    await _leaveVoiceCall();
 
     if (!mounted) return;
     setState(() {
@@ -1805,12 +1233,12 @@ class _RoomScreenState extends State<RoomScreen> {
               isCameraOn: _isCameraOn,
               isVideoMode: _isVideoMode,
               isScreenSharing: _isScreenSharing,
-              micEnabled: !_isMutedByHost && !(_presentationMode && !_isHost),
+              micEnabled: true,
               cameraEnabled: _isVideoMode && !_isScreenSharing,
               onToggleMute: _toggleMute,
               onToggleCamera: _toggleCamera,
               onToggleShare: _isScreenSharing ? _stopScreenShare : _startScreenShare,
-              onLeave: () => _leaveVoiceCall(notifyOthers: true),
+              onLeave: _leaveVoiceCall,
               onMore: () => _openCallMoreSheet(context),
             ),
           ),
@@ -1991,12 +1419,12 @@ class _RoomScreenState extends State<RoomScreen> {
               isCameraOn: _isCameraOn,
               isVideoMode: _isVideoMode,
               isScreenSharing: _isScreenSharing,
-              micEnabled: !_isMutedByHost && !(_presentationMode && !_isHost),
+              micEnabled: true,
               cameraEnabled: _isVideoMode && !_isScreenSharing,
               onToggleMute: _toggleMute,
               onToggleCamera: _toggleCamera,
               onToggleShare: _isScreenSharing ? _stopScreenShare : _startScreenShare,
-              onLeave: () => _leaveVoiceCall(notifyOthers: true),
+              onLeave: _leaveVoiceCall,
               onMore: () => _openCallMoreSheet(context),
             ),
           ),
@@ -2459,26 +1887,6 @@ class _RoomScreenState extends State<RoomScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (_presentationMode)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: Text(
-                    _isHost
-                        ? 'Presentation mode is ON (only host speaks)'
-                        : 'Presentation mode is ON (host only speaks)',
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-              if (_isMutedByHost)
-                const Padding(
-                  padding: EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: Text(
-                    'You are muted by host',
-                    style: TextStyle(color: AppColors.danger),
-                  ),
-                ),
               const Text(
                 'Share room link',
                 style: TextStyle(color: AppColors.textSecondary),
@@ -2526,7 +1934,7 @@ class _RoomScreenState extends State<RoomScreen> {
                     label: 'Leave',
                     icon: PhosphorIconsLight.phoneDisconnect,
                     onPressed:
-                        _isInCall ? () => _leaveVoiceCall(notifyOthers: true) : null,
+                        _isInCall ? _leaveVoiceCall : null,
                   ),
                   _PillActionButton(
                     label: _isMuted ? 'Unmute' : 'Mute',
@@ -2562,304 +1970,7 @@ class _RoomScreenState extends State<RoomScreen> {
           _buildVideoGrid(),
           const SizedBox(height: AppSpacing.md),
         ],
-        _Panel(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                runSpacing: 10,
-                spacing: 12,
-                children: [
-                  const Text(
-                    'Shared Whiteboard',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: _clearBoard,
-                    icon: const Icon(PhosphorIconsLight.broom),
-                    label: const Text('Clear'),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, 40),
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl,
-                    vertical: AppSpacing.sm,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.card,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: AppColors.border),
-                    boxShadow: AppTheme.softShadow,
-                  ),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _BoardToolIconButton(
-                          icon: PhosphorIconsLight.pencilSimple,
-                          selected: _selectedTool == _BoardTool.pen,
-                          onTap: () => setState(() {
-                            _selectedTool = _BoardTool.pen;
-                          }),
-                        ),
-                        _BoardToolIconButton(
-                          icon: PhosphorIconsLight.pencil,
-                          selected: _selectedTool == _BoardTool.pencil,
-                          onTap: () => setState(() {
-                            _selectedTool = _BoardTool.pencil;
-                          }),
-                        ),
-                        _BoardToolIconButton(
-                          icon: PhosphorIconsLight.highlighter,
-                          selected: _selectedTool == _BoardTool.marker,
-                          onTap: () => setState(() {
-                            _selectedTool = _BoardTool.marker;
-                          }),
-                        ),
-                        _BoardToolIconButton(
-                          icon: PhosphorIconsLight.eraser,
-                          selected: _selectedTool == _BoardTool.eraser,
-                          onTap: () => setState(() {
-                            _selectedTool = _BoardTool.eraser;
-                          }),
-                        ),
-                        _BoardToolIconButton(
-                          icon: PhosphorIconsLight.square,
-                          selected: _selectedTool == _BoardTool.rect,
-                          onTap: () => setState(() {
-                            _selectedTool = _BoardTool.rect;
-                          }),
-                        ),
-                        _BoardToolIconButton(
-                          icon: PhosphorIconsLight.circle,
-                          selected: _selectedTool == _BoardTool.circle,
-                          onTap: () => setState(() {
-                            _selectedTool = _BoardTool.circle;
-                          }),
-                        ),
-                        _BoardToolIconButton(
-                          icon: PhosphorIconsLight.textT,
-                          selected: _selectedTool == _BoardTool.text,
-                          onTap: () => setState(() {
-                            _selectedTool = _BoardTool.text;
-                          }),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        _ColorDot(
-                          color: Colors.white,
-                          selected: _selectedColor == Colors.white,
-                          onTap: () => setState(() {
-                            _selectedColor = Colors.white;
-                          }),
-                        ),
-                        _ColorDot(
-                          color: Colors.green.shade500,
-                          selected: _selectedColor == Colors.green.shade500,
-                          onTap: () => setState(() {
-                            _selectedColor = Colors.green.shade500;
-                          }),
-                        ),
-                        _ColorDot(
-                          color: Colors.blue.shade400,
-                          selected: _selectedColor == Colors.blue.shade400,
-                          onTap: () => setState(() {
-                            _selectedColor = Colors.blue.shade400;
-                          }),
-                        ),
-                        _ColorDot(
-                          color: Colors.purple.shade400,
-                          selected: _selectedColor == Colors.purple.shade400,
-                          onTap: () => setState(() {
-                            _selectedColor = Colors.purple.shade400;
-                          }),
-                        ),
-                        _ColorDot(
-                          color: Colors.orange.shade400,
-                          selected: _selectedColor == Colors.orange.shade400,
-                          onTap: () => setState(() {
-                            _selectedColor = Colors.orange.shade400;
-                          }),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              SizedBox(
-                height: 420,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final canvasSize = Size(
-                      constraints.maxWidth,
-                      constraints.maxHeight,
-                    );
-
-                    return GestureDetector(
-                      onTapDown: (details) {
-                        if (_selectedTool == _BoardTool.text) {
-                          _addTextAt(
-                            details.localPosition,
-                            canvasSize,
-                          );
-                        }
-                      },
-                      onPanStart: (details) =>
-                          _onBoardPanStart(details, canvasSize),
-                      onPanUpdate: (details) =>
-                          _onBoardPanUpdate(details, canvasSize),
-                      onPanEnd: (_) => _onBoardPanEnd(),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: _boardBgColor,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: AppColors.canvasBorder),
-                        ),
-                        child: Stack(
-                          children: [
-                            Positioned.fill(
-                              child: CustomPaint(
-                                painter: _WhiteboardGridPainter(),
-                              ),
-                            ),
-                            Positioned.fill(
-                              child: CustomPaint(
-                                painter: _WhiteboardPainter(
-                                  items: _boardItems,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
-    );
-  }
-
-  Widget _buildSidebar(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final participants = _participants;
-
-    return Container(
-      width: 240,
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.border),
-        boxShadow: AppTheme.softShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Workspace', style: textTheme.titleMedium),
-          const SizedBox(height: AppSpacing.md),
-          _SidebarNavItem(
-            icon: PhosphorIconsLight.squaresFour,
-            label: 'Overview',
-            active: false,
-          ),
-          _SidebarNavItem(
-            icon: PhosphorIconsLight.penNib,
-            label: 'Whiteboard',
-            active: true,
-          ),
-          _SidebarNavItem(
-            icon: PhosphorIconsLight.chatDots,
-            label: 'Chat',
-            active: false,
-          ),
-          _SidebarNavItem(
-            icon: PhosphorIconsLight.users,
-            label: 'Participants',
-            active: false,
-          ),
-          _SidebarNavItem(
-            icon: PhosphorIconsLight.gear,
-            label: 'Settings',
-            active: false,
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Text('Participants', style: textTheme.titleMedium),
-          const SizedBox(height: AppSpacing.sm),
-          Expanded(
-            child: ListView.separated(
-              itemCount: participants.length,
-              separatorBuilder: (_, __) => const Divider(height: 16),
-              itemBuilder: (context, index) {
-                final participant = participants[index];
-                final nickname = participant['nickname']?.toString() ?? 'Guest';
-                final isHost = participant['is_host'] == true;
-                final initials = nickname.isNotEmpty
-                    ? nickname.characters.first.toUpperCase()
-                    : '?';
-
-                return Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 16,
-                      backgroundColor: AppColors.accentSoft,
-                      child: Text(
-                        initials,
-                        style: textTheme.labelMedium?.copyWith(
-                          color: AppColors.accent,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Text(
-                        nickname,
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    if (isHost)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.accentSoft,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          'Host',
-                          style: textTheme.labelMedium?.copyWith(
-                            color: AppColors.accent,
-                          ),
-                        ),
-                      ),
-                  ],
-                );
-              },
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -2878,21 +1989,14 @@ class _RoomScreenState extends State<RoomScreen> {
                 style: textTheme.titleMedium,
               ),
               Text(
-                '${_peers.length + 1} members${_presentationMode ? ' • Presentation' : ''}',
+                '${_peers.length + 1} members',
                 style: textTheme.labelMedium?.copyWith(
                   color: AppColors.textSecondary,
                 ),
               ),
             ],
           ),
-          actions: [
-            if (_isHost)
-              IconButton(
-                onPressed: _openHostControlsSheet,
-                icon: const Icon(PhosphorIconsLight.crown),
-              ),
-            const SizedBox(width: AppSpacing.sm),
-          ],
+          actions: const [SizedBox(width: AppSpacing.sm)],
         ),
         body: _GradientBackground(
           child: _isVideoMode
