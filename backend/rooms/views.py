@@ -30,7 +30,6 @@ def create_room_view(request):
             "room_link": f"/room/{room_id}",
             "users": [nickname],
             "host": nickname,
-            "presentation_mode": False,
         }
     )
 
@@ -64,7 +63,6 @@ def join_room_view(request):
             "room_link": f"/room/{room_id}",
             "users": room["users"],
             "host": room.get("host"),
-            "presentation_mode": room.get("presentation_mode", False),
             "message": "Joined room",
         }
     )
