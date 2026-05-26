@@ -23,7 +23,6 @@ const Color _panelBorder = Color(0xFF2D355F);
 const Color _primaryPurple = Color(0xFF6C5CF6);
 const Color _textPrimary = Color(0xFFEAF0FF);
 const Color _textMuted = Color(0xFF98A2C7);
-const Color _boardBgColor = Color(0xFFFFFEFD);
 
 class ChatApp extends StatelessWidget {
   const ChatApp({super.key});
@@ -403,115 +402,10 @@ class _PeerState {
   final RTCVideoRenderer renderer;
 }
 
-enum _BoardTool { pen, pencil, marker, eraser, rect, circle, text }
-
-String _toolKey(_BoardTool tool) {
-  switch (tool) {
-    case _BoardTool.pen:
-      return 'pen';
-    case _BoardTool.pencil:
-      return 'pencil';
-    case _BoardTool.marker:
-      return 'marker';
-    case _BoardTool.eraser:
-      return 'eraser';
-    case _BoardTool.rect:
-      return 'rect';
-    case _BoardTool.circle:
-      return 'circle';
-    case _BoardTool.text:
-      return 'text';
-  }
-}
-
-_BoardTool _toolFromKey(String? value) {
-  switch (value) {
-    case 'pencil':
-      return _BoardTool.pencil;
-    case 'marker':
-      return _BoardTool.marker;
-    case 'eraser':
-      return _BoardTool.eraser;
-    case 'rect':
-      return _BoardTool.rect;
-    case 'circle':
-      return _BoardTool.circle;
-    case 'text':
-      return _BoardTool.text;
-    case 'pen':
-    default:
-      return _BoardTool.pen;
-  }
-}
-
-class _BoardPoint {
-  const _BoardPoint(this.x, this.y);
-
-  final double x;
-  final double y;
-
-  Offset toOffset(Size size) {
-    return Offset(x * size.width, y * size.height);
-  }
-}
-
-abstract class _BoardItem {
-  const _BoardItem();
-}
-
-class _BoardStroke extends _BoardItem {
-  _BoardStroke({
-    required this.tool,
-    required this.points,
-    required this.color,
-    required this.width,
-    required this.opacity,
-  });
-
-  final _BoardTool tool;
-  final List<_BoardPoint> points;
-  final Color color;
-  final double width;
-  final double opacity;
-}
-
-class _BoardShape extends _BoardItem {
-  _BoardShape({
-    required this.tool,
-    required this.start,
-    required this.end,
-    required this.color,
-    required this.width,
-    required this.opacity,
-  });
-
-  final _BoardTool tool;
-  _BoardPoint start;
-  _BoardPoint end;
-  final Color color;
-  final double width;
-  final double opacity;
-}
-
-class _BoardText extends _BoardItem {
-  _BoardText({
-    required this.position,
-    required this.text,
-    required this.color,
-    required this.size,
-  });
-
-  final _BoardPoint position;
-  final String text;
-  final Color color;
-  final double size;
-}
-
 class _RoomScreenState extends State<RoomScreen> {
   late final WebSocketChannel _channel;
   final TextEditingController _messageController = TextEditingController();
   final List<Map<String, String>> _messages = [];
-  Timer? _presencePingTimer;
 
   final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
   MediaStream? _localStream;
@@ -520,22 +414,11 @@ class _RoomScreenState extends State<RoomScreen> {
   late final String _clientId;
   bool _isInCall = false;
   bool _isMuted = false;
-  bool _isMutedByHost = false;
   bool _isCameraOn = true;
   bool _isVideoMode = true;
   bool _isScreenSharing = false;
   bool _lowBandwidthMode = false;
-  final List<_BoardItem> _boardItems = [];
-  final Map<String, _BoardStroke> _remoteStrokes = {};
-  final Map<String, _BoardShape> _remoteShapes = {};
-  _BoardStroke? _activeStroke;
-  _BoardShape? _activeShape;
-  _BoardTool _selectedTool = _BoardTool.pen;
-  Color _selectedColor = Colors.white;
-  static const double _textToolSize = 16;
-  List<Map<String, dynamic>> _participants = [];
-  String? _hostNickname;
-  bool _presentationMode = false;
+  final Map<String, String> _participantsById = {};
   int _mobileTabIndex = 0;
   bool _showChatPanel = true;
   bool _showParticipantsPanel = false;
@@ -566,13 +449,27 @@ class _RoomScreenState extends State<RoomScreen> {
       _handleSocketPayload(payload);
     });
 
-    _registerInRoom();
-    _startPresencePing();
+    // Minimal room join (used for participants sync and WebRTC addressing).
+    _channel.sink.add(
+      jsonEncode({
+        'type': 'participant_join',
+        'sender_id': _clientId,
+        'nickname': widget.nickname,
+      }),
+    );
   }
 
   @override
   void dispose() {
-    _presencePingTimer?.cancel();
+    try {
+      _channel.sink.add(
+        jsonEncode({
+          'type': 'participant_leave',
+          'sender_id': _clientId,
+          'nickname': widget.nickname,
+        }),
+      );
+    } catch (_) {}
     _disposeVoiceResources();
     _localRenderer.dispose();
     _messageController.dispose();
