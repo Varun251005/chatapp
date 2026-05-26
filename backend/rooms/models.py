@@ -33,7 +33,7 @@ class RoomMember(models.Model):
 
 
 class RoomPresence(models.Model):
-    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name="presences")
+    room = models.ForeignKey(Room, on_delete=   models.CASCADE, related_name="presences")
     client_id = models.CharField(max_length=128)
     nickname = models.CharField(max_length=128)
     connected_at = models.DateTimeField(auto_now_add=True)

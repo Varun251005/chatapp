@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -23,19 +24,31 @@ const Color _textMuted = Color(0xFF98A2C7);
 class ChatApp extends StatelessWidget {
   const ChatApp({super.key});
 
+  String? _inviteRoomIdFromUrl() {
+    final segments = Uri.base.pathSegments;
+    if (segments.length >= 2 && segments.first == 'room') {
+      final roomId = segments[1].trim();
+      return roomId.isEmpty ? null : roomId;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final inviteRoomId = _inviteRoomIdFromUrl();
     return MaterialApp(
       title: 'Room Chat App',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme(),
-      home: const NicknameScreen(),
+      home: NicknameScreen(roomIdFromLink: inviteRoomId),
     );
   }
 }
 
 class NicknameScreen extends StatefulWidget {
-  const NicknameScreen({super.key});
+  const NicknameScreen({super.key, this.roomIdFromLink});
+
+  final String? roomIdFromLink;
 
   @override
   State<NicknameScreen> createState() => _NicknameScreenState();
@@ -43,6 +56,7 @@ class NicknameScreen extends StatefulWidget {
 
 class _NicknameScreenState extends State<NicknameScreen> {
   final TextEditingController _nicknameController = TextEditingController();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -50,12 +64,46 @@ class _NicknameScreenState extends State<NicknameScreen> {
     super.dispose();
   }
 
-  void _continueToLobby() {
+  Future<void> _continueToLobby() async {
     final nickname = _nicknameController.text.trim();
     if (nickname.isEmpty) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Please enter a nickname')));
+      return;
+    }
+
+    final inviteRoomId = widget.roomIdFromLink?.trim();
+    if (inviteRoomId != null && inviteRoomId.isNotEmpty) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        await ApiService.joinRoom(inviteRoomId, nickname);
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => RoomScreen(
+              nickname: nickname,
+              roomId: inviteRoomId,
+              roomLink: ApiService.roomInviteLink(inviteRoomId),
+            ),
+          ),
+        );
+      } catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.toString())));
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
       return;
     }
 
@@ -141,7 +189,7 @@ class _NicknameScreenState extends State<NicknameScreen> {
                     const SizedBox(height: AppSpacing.lg),
                     PrimaryButton(
                       label: 'Continue',
-                      onPressed: _continueToLobby,
+                      onPressed: _isLoading ? null : _continueToLobby,
                     ),
                   ],
                 ),
@@ -182,13 +230,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
       final roomData = await ApiService.createRoom(widget.nickname);
       if (!mounted) return;
 
+      final roomId = roomData['room_id'] as String;
+
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => RoomScreen(
             nickname: widget.nickname,
-            roomId: roomData['room_id'] as String,
-            roomLink: roomData['room_link'] as String,
+            roomId: roomId,
+            roomLink: ApiService.roomInviteLink(roomId),
           ),
         ),
       );
@@ -237,7 +287,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           builder: (_) => RoomScreen(
             nickname: widget.nickname,
             roomId: roomId,
-            roomLink: '/room/$roomId',
+            roomLink: ApiService.roomInviteLink(roomId),
           ),
         ),
       );
@@ -256,11 +306,25 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   String _extractRoomId(String value) {
-    if (value.contains('/room/')) {
-      final parts = value.split('/room/');
-      return parts.last.trim();
+    final trimmed = value.trim();
+
+    final uri = Uri.tryParse(trimmed);
+    if (uri != null) {
+      final segments = uri.pathSegments;
+      for (var i = 0; i < segments.length; i++) {
+        if (segments[i] == 'room' && i + 1 < segments.length) {
+          final roomId = segments[i + 1].trim();
+          if (roomId.isNotEmpty) return roomId;
+        }
+      }
     }
-    return value;
+
+    if (trimmed.contains('/room/')) {
+      final parts = trimmed.split('/room/');
+      return parts.last.split('?').first.split('#').first.trim();
+    }
+
+    return trimmed;
   }
 
   @override
@@ -3181,6 +3245,13 @@ class ActionCard extends StatelessWidget {
 
 class ApiService {
   static const String baseUrl = 'https://chatapp-jba7.onrender.com';
+
+  static String roomInviteLink(String roomId) {
+    if (kIsWeb) {
+      return Uri.base.replace(path: '/room/$roomId', query: '').toString();
+    }
+    return '${baseUrl.replaceAll(RegExp(r"/+\$"), '')}/room/$roomId';
+  }
 
   static Uri wsRoomUri(String roomId) {
     final httpUri = Uri.parse(baseUrl);
