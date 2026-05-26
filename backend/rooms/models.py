@@ -7,8 +7,6 @@ from django.utils import timezone
 class Room(models.Model):
     id = models.CharField(primary_key=True, max_length=64)
     host = models.CharField(max_length=128, blank=True, null=True)
-    presentation_mode = models.BooleanField(default=False)
-    muted_users = models.JSONField(default=list, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
