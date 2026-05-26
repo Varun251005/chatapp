@@ -5,20 +5,15 @@ from datetime import timedelta
 from django.db import transaction
 from django.utils import timezone
 
-DEMO_ROOM_ID = "DEMO-1234"
-
 
 def _room_to_dict(room: Room) -> dict:
     users = list(
         room.members.order_by("joined_at").values_list("nickname", flat=True)
     )
-    muted_users = set((room.muted_users or []))
     return {
         "id": room.id,
         "users": users,
         "host": room.host,
-        "presentation_mode": room.presentation_mode,
-        "muted_users": muted_users,
     }
 
 
@@ -29,8 +24,6 @@ def create_room(room_id: str, nickname: str) -> dict:
     room = Room.objects.create(
         id=room_id,
         host=nickname,
-        presentation_mode=False,
-        muted_users=[],
     )
     RoomMember.objects.create(room=room, nickname=nickname)
     return _room_to_dict(room)
@@ -58,58 +51,6 @@ def get_room(room_id: str) -> dict:
     from .models import Room
 
     room = Room.objects.get(id=room_id)
-    return _room_to_dict(room)
-
-
-def is_host(room_id: str, nickname: str) -> bool:
-    from .models import Room
-
-    return Room.objects.filter(id=room_id, host=nickname).exists()
-
-
-def set_presentation_mode(room_id: str, enabled: bool) -> dict:
-    from .models import Room
-
-    Room.objects.filter(id=room_id).update(presentation_mode=enabled)
-    return get_room(room_id)
-
-
-@transaction.atomic
-def set_user_muted(room_id: str, nickname: str, muted: bool) -> dict:
-    from .models import Room
-
-    room = Room.objects.select_for_update().get(id=room_id)
-    muted_users = set((room.muted_users or []))
-    if muted:
-        muted_users.add(nickname)
-    else:
-        muted_users.discard(nickname)
-    room.muted_users = sorted(muted_users)
-    room.save(update_fields=["muted_users", "updated_at"])
-    return _room_to_dict(room)
-
-
-@transaction.atomic
-def kick_user(room_id: str, nickname: str) -> dict:
-    from .models import Room, RoomMember
-
-    room = Room.objects.select_for_update().get(id=room_id)
-
-    RoomMember.objects.filter(room=room, nickname=nickname).delete()
-    muted_users = set((room.muted_users or []))
-    muted_users.discard(nickname)
-    room.muted_users = sorted(muted_users)
-
-    if room.host == nickname:
-        new_host = (
-            RoomMember.objects.filter(room=room)
-            .order_by("joined_at")
-            .values_list("nickname", flat=True)
-            .first()
-        )
-        room.host = new_host
-
-    room.save(update_fields=["host", "muted_users", "updated_at"])
     return _room_to_dict(room)
 
 
