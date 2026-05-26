@@ -482,7 +482,6 @@ class _RoomScreenState extends State<RoomScreen> {
   int _mobileTabIndex = 0;
   bool _showChatPanel = true;
   bool _showParticipantsPanel = false;
-  bool _showSettingsPanel = false;
   bool _sidebarExpanded = false;
 
   static const int _maxUsersInCall = 6;
@@ -491,7 +490,6 @@ class _RoomScreenState extends State<RoomScreen> {
     setState(() {
       _showChatPanel = false;
       _showParticipantsPanel = false;
-      _showSettingsPanel = false;
     });
   }
 
@@ -2192,27 +2190,6 @@ class _RoomScreenState extends State<RoomScreen> {
                           }
                           return;
                         }
-
-                        if (index == 3) {
-                          await showModalBottomSheet<void>(
-                            context: context,
-                            useSafeArea: true,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (context) {
-                              return FractionallySizedBox(
-                                heightFactor: 0.65,
-                                child: _buildSettingsPanel(context),
-                              );
-                            },
-                          );
-                          if (mounted) {
-                            setState(() {
-                              _mobileTabIndex = 0;
-                            });
-                          }
-                          return;
-                        }
                       },
                       destinations: const [
                         NavigationDestination(
@@ -2226,10 +2203,6 @@ class _RoomScreenState extends State<RoomScreen> {
                         NavigationDestination(
                           icon: Icon(PhosphorIconsLight.users),
                           label: 'Participants',
-                        ),
-                        NavigationDestination(
-                          icon: Icon(PhosphorIconsLight.gear),
-                          label: 'Settings',
                         ),
                       ],
                     ),
@@ -2246,15 +2219,13 @@ class _RoomScreenState extends State<RoomScreen> {
             final panelRightPadding = AppSpacing.md;
             final panelBottomPadding = AppSpacing.md;
 
-            final activeSection = _showSettingsPanel
-              ? _MiniSidebarSection.settings
-              : _showParticipantsPanel
+            final activeSection = _showParticipantsPanel
               ? _MiniSidebarSection.participants
               : _showChatPanel
               ? _MiniSidebarSection.chat
               : _MiniSidebarSection.room;
 
-            final showScrim = isTablet && (_showChatPanel || _showParticipantsPanel || _showSettingsPanel);
+            final showScrim = isTablet && (_showChatPanel || _showParticipantsPanel);
             final isChatDocked = !isTablet;
             final dockedRightInset = (_showChatPanel && isChatDocked)
               ? (panelWidth + panelRightPadding + AppSpacing.lg)
@@ -2299,21 +2270,12 @@ class _RoomScreenState extends State<RoomScreen> {
                               setState(() {
                                 _showChatPanel = !_showChatPanel;
                                 _showParticipantsPanel = false;
-                                _showSettingsPanel = false;
                               });
                             },
                             onParticipants: () {
                               setState(() {
                                 _showParticipantsPanel = !_showParticipantsPanel;
                                 _showChatPanel = false;
-                                _showSettingsPanel = false;
-                              });
-                            },
-                            onSettings: () {
-                              setState(() {
-                                _showSettingsPanel = !_showSettingsPanel;
-                                _showChatPanel = false;
-                                _showParticipantsPanel = false;
                               });
                             },
                           ),
@@ -2356,15 +2318,6 @@ class _RoomScreenState extends State<RoomScreen> {
                     bottom: panelBottomPadding,
                     docked: false,
                     child: _buildParticipantsPanel(context),
-                  ),
-                  _SlidePanel(
-                    visible: _showSettingsPanel,
-                    width: panelWidth,
-                    top: panelTopPadding,
-                    right: panelRightPadding,
-                    bottom: panelBottomPadding,
-                    docked: false,
-                    child: _buildSettingsPanel(context),
                   ),
                 ],
               ),
@@ -2472,7 +2425,13 @@ class _RoomScreenState extends State<RoomScreen> {
             height: 48,
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () {},
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: widget.roomLink));
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Invite link copied')),
+                );
+              },
               icon: const Icon(PhosphorIconsLight.userPlus, size: 18),
               label: const Text('Invite Participants'),
               style: OutlinedButton.styleFrom(
@@ -2486,84 +2445,9 @@ class _RoomScreenState extends State<RoomScreen> {
       ),
     );
   }
-
-  Widget _buildSettingsPanel(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    Widget item({required IconData icon, required String label, bool danger = false}) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 18, color: danger ? AppColors.danger : AppColors.textSecondary),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(
-                label,
-                style: textTheme.bodyMedium?.copyWith(
-                  color: danger ? AppColors.danger : AppColors.textPrimary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.border),
-        boxShadow: AppTheme.softShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text('Settings', style: textTheme.titleMedium),
-              const Spacer(),
-              IconButton(
-                onPressed: () {
-                  if (MediaQuery.of(context).size.width >= 700) {
-                    setState(() {
-                      _showSettingsPanel = false;
-                    });
-                  } else {
-                    Navigator.of(context).pop();
-                  }
-                },
-                icon: const Icon(PhosphorIconsLight.x),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          item(icon: PhosphorIconsLight.info, label: 'Room Info'),
-          const SizedBox(height: 12),
-          item(icon: PhosphorIconsLight.lockKey, label: 'Permissions'),
-          const SizedBox(height: 12),
-          item(icon: PhosphorIconsLight.paintBrush, label: 'Background'),
-          const SizedBox(height: 12),
-          item(icon: PhosphorIconsLight.keyboard, label: 'Shortcuts'),
-          const SizedBox(height: 12),
-          item(icon: PhosphorIconsLight.question, label: 'Help & Support'),
-          const Spacer(),
-          item(icon: PhosphorIconsLight.signOut, label: 'Leave Room', danger: true),
-        ],
-      ),
-    );
-  }
 }
 
-enum _MiniSidebarSection { room, chat, participants, settings }
+enum _MiniSidebarSection { room, chat, participants }
 
 class _MiniSidebar extends StatelessWidget {
   const _MiniSidebar({
@@ -2573,7 +2457,6 @@ class _MiniSidebar extends StatelessWidget {
     required this.onRoom,
     required this.onChat,
     required this.onParticipants,
-    required this.onSettings,
   });
 
   final bool expanded;
@@ -2582,7 +2465,6 @@ class _MiniSidebar extends StatelessWidget {
   final VoidCallback onRoom;
   final VoidCallback onChat;
   final VoidCallback onParticipants;
-  final VoidCallback onSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -2632,13 +2514,6 @@ class _MiniSidebar extends StatelessWidget {
             expanded: expanded,
             active: active == _MiniSidebarSection.participants,
             onTap: onParticipants,
-          ),
-          _MiniSidebarItem(
-            icon: PhosphorIconsLight.gear,
-            label: 'Settings',
-            expanded: expanded,
-            active: active == _MiniSidebarSection.settings,
-            onTap: onSettings,
           ),
           const Spacer(),
           InkWell(
