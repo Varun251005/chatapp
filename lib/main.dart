@@ -16,11 +16,7 @@ void main() {
   runApp(const ChatApp());
 }
 
-const Color _bgTop = Color(0xFF0F1226);
-const Color _bgBottom = Color(0xFF090B15);
-const Color _panelColor = Color(0xFF141A2F);
 const Color _panelBorder = Color(0xFF2D355F);
-const Color _primaryPurple = Color(0xFF6C5CF6);
 const Color _textPrimary = Color(0xFFEAF0FF);
 const Color _textMuted = Color(0xFF98A2C7);
 
@@ -1508,7 +1504,12 @@ class _RoomScreenState extends State<RoomScreen> {
     if (text.isEmpty) return;
 
     _channel.sink.add(
-      jsonEncode({'nickname': widget.nickname, 'message': text}),
+      jsonEncode({
+        'type': 'chat_message',
+        'sender_id': _clientId,
+        'nickname': widget.nickname,
+        'message': text,
+      }),
     );
 
     _messageController.clear();
@@ -1522,7 +1523,7 @@ class _RoomScreenState extends State<RoomScreen> {
   }) {
     final textTheme = Theme.of(context).textTheme;
     final topInset = MediaQuery.of(context).padding.top;
-    final displayParticipants = _participants.take(4).toList();
+    final displayParticipants = _participantsById.entries.take(4).toList();
 
     return PreferredSize(
       preferredSize: Size.fromHeight(topInset + 80 + (AppSpacing.sm * 2)),
@@ -1600,7 +1601,7 @@ class _RoomScreenState extends State<RoomScreen> {
                     ),
                   ),
                 ...displayParticipants.map((participant) {
-                  final nickname = participant['nickname']?.toString() ?? '';
+                  final nickname = participant.value;
                   final initials = nickname.isNotEmpty
                       ? nickname.characters.first.toUpperCase()
                       : '?';
@@ -2151,8 +2152,8 @@ class _RoomScreenState extends State<RoomScreen> {
                       },
                       destinations: const [
                         NavigationDestination(
-                          icon: Icon(PhosphorIconsLight.penNib),
-                          label: 'Whiteboard',
+                          icon: Icon(PhosphorIconsLight.videoCamera),
+                          label: 'Room',
                         ),
                         NavigationDestination(
                           icon: Icon(PhosphorIconsLight.chatDots),
@@ -2187,7 +2188,7 @@ class _RoomScreenState extends State<RoomScreen> {
               ? _MiniSidebarSection.participants
               : _showChatPanel
               ? _MiniSidebarSection.chat
-              : _MiniSidebarSection.whiteboard;
+              : _MiniSidebarSection.room;
 
             final showScrim = isTablet && (_showChatPanel || _showParticipantsPanel || _showSettingsPanel);
             final isChatDocked = !isTablet;
@@ -2227,7 +2228,7 @@ class _RoomScreenState extends State<RoomScreen> {
                                 _sidebarExpanded = !_sidebarExpanded;
                               });
                             },
-                            onWhiteboard: () {
+                            onRoom: () {
                               _closeOverlays();
                             },
                             onChat: () {
@@ -2312,7 +2313,7 @@ class _RoomScreenState extends State<RoomScreen> {
 
   Widget _buildParticipantsPanel(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final participants = _participants;
+    final participants = _participantsById.entries.toList();
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.xl),
@@ -2366,11 +2367,10 @@ class _RoomScreenState extends State<RoomScreen> {
           Expanded(
             child: ListView.separated(
               itemCount: participants.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final participant = participants[index];
-                final nickname = participant['nickname']?.toString() ?? 'Guest';
-                final isHost = participant['is_host'] == true;
+                final nickname = participant.value;
                 final initials = nickname.isNotEmpty
                     ? nickname.characters.first.toUpperCase()
                     : '?';
@@ -2398,25 +2398,6 @@ class _RoomScreenState extends State<RoomScreen> {
                         ),
                       ),
                     ),
-                    if (isHost)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.accentSoft,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: const Text(
-                          'Host',
-                          style: TextStyle(
-                            color: AppColors.accent,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
                   ],
                 );
               },
@@ -2518,14 +2499,14 @@ class _RoomScreenState extends State<RoomScreen> {
   }
 }
 
-enum _MiniSidebarSection { whiteboard, chat, participants, settings }
+enum _MiniSidebarSection { room, chat, participants, settings }
 
 class _MiniSidebar extends StatelessWidget {
   const _MiniSidebar({
     required this.expanded,
     required this.active,
     required this.onToggleExpand,
-    required this.onWhiteboard,
+    required this.onRoom,
     required this.onChat,
     required this.onParticipants,
     required this.onSettings,
@@ -2534,7 +2515,7 @@ class _MiniSidebar extends StatelessWidget {
   final bool expanded;
   final _MiniSidebarSection active;
   final VoidCallback onToggleExpand;
-  final VoidCallback onWhiteboard;
+  final VoidCallback onRoom;
   final VoidCallback onChat;
   final VoidCallback onParticipants;
   final VoidCallback onSettings;
@@ -2568,11 +2549,11 @@ class _MiniSidebar extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           _MiniSidebarItem(
-            icon: PhosphorIconsLight.penNib,
-            label: 'Whiteboard',
+            icon: PhosphorIconsLight.videoCamera,
+            label: 'Room',
             expanded: expanded,
-            active: active == _MiniSidebarSection.whiteboard,
-            onTap: onWhiteboard,
+            active: active == _MiniSidebarSection.room,
+            onTap: onRoom,
           ),
           _MiniSidebarItem(
             icon: PhosphorIconsLight.chatDots,
@@ -2717,47 +2698,6 @@ class _SlidePanel extends StatelessWidget {
   }
 }
 
-class _SidebarNavItem extends StatelessWidget {
-  const _SidebarNavItem({
-    required this.icon,
-    required this.label,
-    required this.active,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = active ? AppColors.accent : AppColors.textSecondary;
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: active ? AppColors.accentSoft : Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: color),
-          const SizedBox(width: AppSpacing.sm),
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _PillActionButton extends StatelessWidget {
   const _PillActionButton({
     required this.label,
@@ -2799,51 +2739,6 @@ class _PillActionButton extends StatelessWidget {
             side: BorderSide(color: borderColor),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _CallCircleButton extends StatelessWidget {
-  const _CallCircleButton({
-    required this.icon,
-    required this.onTap,
-    this.isDanger = false,
-    this.isPrimary = false,
-  });
-
-  final IconData icon;
-  final VoidCallback onTap;
-  final bool isDanger;
-  final bool isPrimary;
-
-  @override
-  Widget build(BuildContext context) {
-    Color bgColor = AppColors.card;
-    Color iconColor = AppColors.textPrimary;
-
-    if (isPrimary) {
-      bgColor = AppColors.accentSoft;
-      iconColor = AppColors.accent;
-    }
-    if (isDanger) {
-      bgColor = AppColors.danger;
-      iconColor = Colors.white;
-    }
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: bgColor,
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.border),
-          boxShadow: AppTheme.softShadow,
-        ),
-        child: Icon(icon, color: iconColor, size: 20),
       ),
     );
   }
@@ -3035,114 +2930,6 @@ class _ModeChip extends StatelessWidget {
   }
 }
 
-class _ColorDot extends StatelessWidget {
-  const _ColorDot({
-    required this.color,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final Color color;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 20,
-        height: 20,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: selected ? AppColors.accent : AppColors.border,
-            width: 2,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BoardToolButton extends StatelessWidget {
-  const _BoardToolButton({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = selected ? AppColors.accent : AppColors.textSecondary;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.xs,
-          vertical: 6,
-        ),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.accentSoft : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 18),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(color: color, fontSize: 9),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BoardToolIconButton extends StatelessWidget {
-  const _BoardToolIconButton({
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8),
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.accentSoft : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(
-          icon,
-          size: 20,
-          color: selected ? AppColors.accent : AppColors.textSecondary,
-        ),
-      ),
-    );
-  }
-}
-
 class _GradientBackground extends StatelessWidget {
   const _GradientBackground({required this.child});
 
@@ -3174,86 +2961,6 @@ class _Panel extends StatelessWidget {
       ),
       child: child,
     );
-  }
-}
-
-class _WhiteboardPainter extends CustomPainter {
-  const _WhiteboardPainter({required this.items});
-
-  final List<_BoardItem> items;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    for (final item in items) {
-      if (item is _BoardStroke) {
-        if (item.points.length < 2) continue;
-        final paint = Paint()
-          ..color = item.color.withOpacity(item.opacity)
-          ..strokeWidth = item.width
-          ..strokeCap = StrokeCap.round
-          ..style = PaintingStyle.stroke;
-
-        final path = Path();
-        final first = item.points.first.toOffset(size);
-        path.moveTo(first.dx, first.dy);
-        for (final point in item.points.skip(1)) {
-          final offset = point.toOffset(size);
-          path.lineTo(offset.dx, offset.dy);
-        }
-        canvas.drawPath(path, paint);
-      } else if (item is _BoardShape) {
-        final paint = Paint()
-          ..color = item.color.withOpacity(item.opacity)
-          ..strokeWidth = item.width
-          ..style = PaintingStyle.stroke;
-
-        final start = item.start.toOffset(size);
-        final end = item.end.toOffset(size);
-        final rect = Rect.fromPoints(start, end);
-
-        if (item.tool == _BoardTool.circle) {
-          canvas.drawOval(rect, paint);
-        } else {
-          canvas.drawRect(rect, paint);
-        }
-      } else if (item is _BoardText) {
-        final offset = item.position.toOffset(size);
-        final painter = TextPainter(
-          text: TextSpan(
-            text: item.text,
-            style: TextStyle(color: item.color, fontSize: item.size),
-          ),
-          textDirection: TextDirection.ltr,
-        )..layout();
-        painter.paint(canvas, offset);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _WhiteboardPainter oldDelegate) {
-    return oldDelegate.items != items;
-  }
-}
-
-class _WhiteboardGridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    const double spacing = 18;
-    final paint = Paint()
-      ..color = AppColors.border.withOpacity(0.6)
-      ..strokeWidth = 1;
-
-    for (double y = 0; y <= size.height; y += spacing) {
-      for (double x = 0; x <= size.width; x += spacing) {
-        canvas.drawCircle(Offset(x, y), 0.8, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _WhiteboardGridPainter oldDelegate) {
-    return false;
   }
 }
 
@@ -3461,10 +3168,10 @@ class ActionCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (trailing != null) trailing!,
+                if (trailing != null) trailing,
               ],
             ),
-            if (child != null) child!,
+            if (child != null) child,
           ],
         ),
       ),
