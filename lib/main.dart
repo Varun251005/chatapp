@@ -1853,7 +1853,7 @@ class _RoomScreenState extends State<RoomScreen> {
                                                 colors: [
                                                   AppColors.accent,
                                                   AppColors.accent
-                                                      .withOpacity(0.85),
+                                                      .withAlpha(217),
                                                 ],
                                               )
                                             : null,
@@ -2297,7 +2297,7 @@ class _RoomScreenState extends State<RoomScreen> {
                       child: GestureDetector(
                         onTap: _closeOverlays,
                         child: Container(
-                          color: Colors.black.withOpacity(0.08),
+                          color: Colors.black.withAlpha(20),
                         ),
                       ),
                     ),
@@ -3107,10 +3107,12 @@ class ActionCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (trailing case final t?) t,
+                ...(trailing == null
+                    ? const <Widget>[]
+                    : <Widget>[trailing!]),
               ],
             ),
-            if (child case final c?) c,
+            ...(child == null ? const <Widget>[] : <Widget>[child!]),
           ],
         ),
       ),
