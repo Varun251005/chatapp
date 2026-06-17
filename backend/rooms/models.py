@@ -5,8 +5,16 @@ from django.utils import timezone
 
 
 class Room(models.Model):
+    ROOM_TYPES = [
+        ("chat", "Chat"),
+        ("voice", "Voice"),
+        ("video", "Video"),
+    ]
+
     id = models.CharField(primary_key=True, max_length=64)
     host = models.CharField(max_length=128, blank=True, null=True)
+    room_type = models.CharField(max_length=16, choices=ROOM_TYPES, default="chat")
+    max_members = models.PositiveSmallIntegerField(default=4)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -33,7 +41,7 @@ class RoomMember(models.Model):
 
 
 class RoomPresence(models.Model):
-    room = models.ForeignKey(Room, on_delete=   models.CASCADE, related_name="presences")
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name="presences")
     client_id = models.CharField(max_length=128)
     nickname = models.CharField(max_length=128)
     connected_at = models.DateTimeField(auto_now_add=True)
@@ -50,3 +58,18 @@ class RoomPresence(models.Model):
 
     def __str__(self) -> str:  # pragma: no cover
         return f"RoomPresence({self.room_id}, {self.client_id})"
+
+
+class RoomMessage(models.Model):
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name="messages")
+    sender_id = models.CharField(max_length=128)
+    nickname = models.CharField(max_length=128)
+    message = models.TextField()
+    message_type = models.CharField(max_length=24, default="chat")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+
+    def __str__(self) -> str:  # pragma: no cover
+        return f"RoomMessage({self.room_id}, {self.nickname})"

@@ -21,13 +21,18 @@ def create_room_view(request):
     if not nickname:
         return JsonResponse({"error": "Nickname is required"}, status=400)
 
-    room_id = uuid.uuid4().hex[:8]
-    create_room(room_id, nickname)
+    room_id = str(payload.get("room_id", "")).strip() or uuid.uuid4().hex[:8]
+    room_type = str(payload.get("room_type", "chat")).strip() or "chat"
+    max_members_raw = str(payload.get("max_members", 4)).strip()
+    max_members = int(max_members_raw) if max_members_raw.isdigit() else 4
+    create_room(room_id, nickname, room_type=room_type, max_members=max_members)
 
     return JsonResponse(
         {
             "room_id": room_id,
             "room_link": f"/room/{room_id}",
+            "room_type": room_type,
+            "max_members": max_members,
             "users": [nickname],
             "host": nickname,
         }

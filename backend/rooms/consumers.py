@@ -73,6 +73,11 @@ class RoomConsumer(AsyncWebsocketConsumer):
                 return
 
             # Bind this socket to a participant identity.
+from .storage import (
+    add_message,
+    delete_room_if_empty,
+    list_messages,
+)
             self.client_id = client_id
             self.nickname = nickname
 
@@ -84,6 +89,24 @@ class RoomConsumer(AsyncWebsocketConsumer):
                 presence_id = presence.get("client_id")
                 if not presence_id or presence_id == client_id:
                     continue
+    async def _send_room_snapshot(self, target_sender_id: str | None = None) -> None:
+        presences = await database_sync_to_async(list_presence)(self.room_id)
+        messages = await database_sync_to_async(list_messages)(self.room_id)
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "type": "room_state",
+                    "room_id": self.room_id,
+                    "room_type": self.room_type,
+                    "max_members": self.max_members,
+                    "host": self.host,
+                    "participants": presences,
+                    "member_count": len(presences),
+                    "messages": messages,
+                    "target_sender_id": target_sender_id,
+                }
+            )
+        )
                 await self.send(
                     text_data=json.dumps(
                         {
@@ -123,6 +146,7 @@ class RoomConsumer(AsyncWebsocketConsumer):
             return
 
         if message_type in {"webrtc_offer", "webrtc_answer", "webrtc_ice"}:
+            await self._broadcast_room_snapshot()
             sender_id = str(payload.get("sender_id", "")).strip()
             if not sender_id or not self.client_id or sender_id != self.client_id:
                 return

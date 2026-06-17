@@ -7,25 +7,34 @@ from django.utils import timezone
 
 
 def _room_to_dict(room: Room) -> dict:
-    users = list(
-        room.members.order_by("joined_at").values_list("nickname", flat=True)
-    )
+    users = list(room.members.order_by("joined_at").values_list("nickname", flat=True))
     return {
         "id": room.id,
+        "room_type": room.room_type,
+        "max_members": room.max_members,
         "users": users,
         "host": room.host,
+        "room_link": f"/room/{room.id}",
     }
 
 
 @transaction.atomic
-def create_room(room_id: str, nickname: str) -> dict:
+def create_room(room_id: str, nickname: str, room_type: str = "chat", max_members: int = 4) -> dict:
     from .models import Room, RoomMember
 
-    room = Room.objects.create(
+    room, _created = Room.objects.get_or_create(
         id=room_id,
-        host=nickname,
+        defaults={
+            "host": nickname,
+            "room_type": room_type,
+            "max_members": max_members,
+        },
     )
-    RoomMember.objects.create(room=room, nickname=nickname)
+    if not room.host:
+        room.host = nickname
+        room.save(update_fields=["host", "updated_at"])
+
+    RoomMember.objects.get_or_create(room=room, nickname=nickname)
     return _room_to_dict(room)
 
 
@@ -40,6 +49,9 @@ def join_room(room_id: str, nickname: str) -> dict:
     from .models import Room, RoomMember
 
     room = Room.objects.select_for_update().get(id=room_id)
+    if room.members.exclude(nickname=nickname).count() >= room.max_members:
+        raise ValueError("Room is full")
+
     RoomMember.objects.get_or_create(room=room, nickname=nickname)
     if not room.host:
         room.host = nickname
@@ -104,3 +116,54 @@ def presence_exists(room_id: str, client_id: str) -> bool:
     from .models import RoomPresence
 
     return RoomPresence.objects.filter(room_id=room_id, client_id=client_id).exists()
+
+
+@transaction.atomic
+def delete_room_if_empty(room_id: str) -> bool:
+    from .models import Room
+
+    room = Room.objects.filter(id=room_id).first()
+    if not room:
+        return False
+    if room.presences.exists():
+        return False
+    room.delete()
+    return True
+
+
+@transaction.atomic
+def add_message(room_id: str, sender_id: str, nickname: str, message: str, message_type: str = "chat") -> dict:
+    from .models import RoomMessage
+
+    room = Room.objects.get(id=room_id)
+    message_obj = RoomMessage.objects.create(
+        room=room,
+        sender_id=sender_id,
+        nickname=nickname,
+        message=message,
+        message_type=message_type,
+    )
+    return {
+        "id": message_obj.id,
+        "room_id": room_id,
+        "sender_id": sender_id,
+        "nickname": nickname,
+        "message": message,
+        "message_type": message_type,
+        "created_at": message_obj.created_at.isoformat(),
+    }
+
+
+def list_messages(room_id: str, limit: int = 50) -> list[dict]:
+    from .models import RoomMessage
+
+    return list(
+        RoomMessage.objects.filter(room_id=room_id).order_by("-created_at", "-id")[:limit].values(
+            "id",
+            "sender_id",
+            "nickname",
+            "message",
+            "message_type",
+            "created_at",
+        )
+    )[::-1]
