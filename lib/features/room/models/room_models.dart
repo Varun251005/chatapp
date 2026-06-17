@@ -2,6 +2,8 @@ enum RoomType { chat, voice, video }
 
 enum CallMode { idle, voice, video }
 
+const String roomShareBaseUrl = 'http://127.0.0.1:8000';
+
 extension RoomTypeX on RoomType {
   String get label {
     switch (this) {
@@ -29,6 +31,21 @@ class RoomMessage {
   final bool isMine;
   final DateTime createdAt;
   final bool isSystem;
+
+  factory RoomMessage.fromBackend(
+    Map<String, dynamic> json, {
+    required String clientId,
+  }) {
+    return RoomMessage(
+      sender: (json['nickname'] as String?)?.trim().isNotEmpty == true
+          ? (json['nickname'] as String).trim()
+          : 'Unknown',
+      text: (json['message'] as String?)?.trim() ?? '',
+      isMine: (json['sender_id'] as String?) == clientId,
+      createdAt: DateTime.tryParse((json['created_at'] as String?) ?? '') ?? DateTime.now(),
+      isSystem: (json['message_type'] as String?) == 'system',
+    );
+  }
 }
 
 class RoomSession {
@@ -45,7 +62,7 @@ class RoomSession {
   final int maxMembers;
 
   String get inviteLink =>
-      'https://chatsnap.app/room/$roomId?type=${roomType.name}&max=$maxMembers';
+      '$roomShareBaseUrl/room/$roomId?type=${roomType.name}&max=$maxMembers';
 
   String get qrPayload => inviteLink;
 }
