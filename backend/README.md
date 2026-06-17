@@ -17,8 +17,8 @@ This folder contains beginner-friendly Django code for room creation/joining and
 
 ## API endpoints
 
-- `POST /api/rooms/create/` with JSON `{ "nickname": "alice" }`
-- `POST /api/rooms/join/` with JSON `{ "room_id": "abcd1234", "nickname": "bob" }`
+- `POST /api/rooms/create/` with JSON `{ "room_id": "blue-tiger", "nickname": "alice", "room_type": "chat", "max_members": 4 }`
+- `POST /api/rooms/join/` with JSON `{ "room_id": "blue-tiger", "nickname": "bob" }`
 
 ## Important note
 
@@ -67,11 +67,13 @@ Each room uses its own Channels group name: `room_<room_id>`.
 
 Signaling uses the same room websocket connection.
 
+- `room_state` and `room_participants`
 - `webrtc_ready`
 - `webrtc_offer` with `sdp`
 - `webrtc_answer` with `sdp`
 - `webrtc_ice` with `candidate` object
 - `webrtc_leave`
+- `chat_message`
 
 All signaling payloads include `sender_id` so clients can ignore their own messages.
 
@@ -149,6 +151,8 @@ curl -X POST https://chatapp-jba7.onrender.com/api/rooms/create/ \
 Expected: JSON with `room_id` and `room_link`.
 
 If Flutter shows `ClientException: Failed to fetch`, usually backend is not running or running on a different port.
+
+For local Flutter development, the app is configured to talk to `http://127.0.0.1:8000` and `ws://127.0.0.1:8000`.
 
 ## Flutter websocket
 
