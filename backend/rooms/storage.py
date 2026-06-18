@@ -30,9 +30,19 @@ def create_room(room_id: str, nickname: str, room_type: str = "chat", max_member
             "max_members": max_members,
         },
     )
+    changed_fields = []
+    if room.room_type != room_type:
+        room.room_type = room_type
+        changed_fields.append("room_type")
+    if room.max_members != max_members:
+        room.max_members = max_members
+        changed_fields.append("max_members")
     if not room.host:
         room.host = nickname
-        room.save(update_fields=["host", "updated_at"])
+        changed_fields.append("host")
+
+    if changed_fields:
+        room.save(update_fields=changed_fields + ["updated_at"])
 
     RoomMember.objects.get_or_create(room=room, nickname=nickname)
     return _room_to_dict(room)
@@ -157,13 +167,15 @@ def add_message(room_id: str, sender_id: str, nickname: str, message: str, messa
 def list_messages(room_id: str, limit: int = 50) -> list[dict]:
     from .models import RoomMessage
 
-    return list(
-        RoomMessage.objects.filter(room_id=room_id).order_by("-created_at", "-id")[:limit].values(
-            "id",
-            "sender_id",
-            "nickname",
-            "message",
-            "message_type",
-            "created_at",
-        )
-    )[::-1]
+    messages = []
+    for item in RoomMessage.objects.filter(room_id=room_id).order_by("-created_at", "-id")[:limit].values(
+        "id",
+        "sender_id",
+        "nickname",
+        "message",
+        "message_type",
+        "created_at",
+    ):
+        item["created_at"] = item["created_at"].isoformat()
+        messages.append(item)
+    return list(reversed(messages))
