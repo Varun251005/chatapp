@@ -25,16 +25,16 @@ def create_room_view(request):
     room_type = str(payload.get("room_type", "chat")).strip() or "chat"
     max_members_raw = str(payload.get("max_members", 4)).strip()
     max_members = int(max_members_raw) if max_members_raw.isdigit() else 4
-    create_room(room_id, nickname, room_type=room_type, max_members=max_members)
+    room = create_room(room_id, nickname, room_type=room_type, max_members=max_members)
 
     return JsonResponse(
         {
-            "room_id": room_id,
-            "room_link": f"/room/{room_id}",
-            "room_type": room_type,
-            "max_members": max_members,
-            "users": [nickname],
-            "host": nickname,
+            "room_id": room["id"],
+            "room_link": room["room_link"],
+            "room_type": room["room_type"],
+            "max_members": room["max_members"],
+            "users": room["users"],
+            "host": room.get("host"),
         }
     )
 
@@ -61,11 +61,17 @@ def join_room_view(request):
     if not room_exists(room_id):
         return JsonResponse({"error": "Room does not exist"}, status=404)
 
-    room = join_room(room_id, nickname)
+    try:
+        room = join_room(room_id, nickname)
+    except ValueError as error:
+        return JsonResponse({"error": str(error)}, status=409)
+
     return JsonResponse(
         {
-            "room_id": room_id,
-            "room_link": f"/room/{room_id}",
+            "room_id": room["id"],
+            "room_link": room["room_link"],
+            "room_type": room["room_type"],
+            "max_members": room["max_members"],
             "users": room["users"],
             "host": room.get("host"),
             "message": "Joined room",
