@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../theme/spacing.dart';
+import '../models/room_models.dart';
 import '../services/room_controller.dart';
 import 'app_widgets.dart';
 
@@ -70,11 +71,20 @@ class _JoinRoomSheetState extends State<JoinRoomSheet> {
           const SizedBox(height: AppSpacing.md),
           PrimaryButton(
             label: 'Join',
-            onPressed: () {
+            onPressed: () async {
               if (_controller.text.trim().isEmpty) return;
-              context.read<RoomController>().joinRoom(_controller.text);
-              Navigator.of(context).pop();
-              context.go('/chat');
+              try {
+                await context.read<RoomController>().joinRoom(_controller.text);
+                if (!context.mounted) return;
+                Navigator.of(context).pop();
+                context.go('/chat');
+              } catch (_) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Unable to join room')),
+                  );
+                }
+              }
             },
           ),
         ],
@@ -149,17 +159,26 @@ class _ScanQrSheetState extends State<ScanQrSheet> {
           const SizedBox(height: AppSpacing.md),
           TextField(
             decoration: const InputDecoration(hintText: 'Fallback: paste room link'),
-            onSubmitted: (value) {
+            onSubmitted: (value) async {
               if (value.trim().isEmpty) return;
-              context.read<RoomController>().joinByScan(value);
-              Navigator.of(context).pop();
-              context.go('/chat');
+              try {
+                await context.read<RoomController>().joinByScan(value);
+                if (!context.mounted) return;
+                Navigator.of(context).pop();
+                context.go('/chat');
+              } catch (_) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Unable to join room')),
+                  );
+                }
+              }
             },
           ),
           const SizedBox(height: AppSpacing.sm),
           TextButton(
             onPressed: () {
-              Clipboard.setData(const ClipboardData(text: 'https://chatsnap.app/room/blue-tiger?type=chat&max=4'));
+              Clipboard.setData(const ClipboardData(text: '$roomShareBaseUrl/room/blue-tiger?type=chat&max=4'));
             },
             child: const Text('Copy sample room link'),
           ),
